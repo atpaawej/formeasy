@@ -25,7 +25,7 @@ export default async function SubmittedPage(
   return (
     <div className="flex min-h-svh flex-col">
       <main className="mx-auto flex w-full max-w-2xl flex-1 items-center justify-center px-4 py-10 sm:px-6">
-        <div className="flex max-w-md flex-col items-center gap-3 text-center">
+        <div className="rise-in flex max-w-md flex-col items-center gap-4 text-center">
           <span className="grid size-10 place-items-center rounded-full bg-primary/10 text-primary">
             <CheckIcon className="size-5" />
           </span>
@@ -37,7 +37,7 @@ export default async function SubmittedPage(
           </p>
         </div>
       </main>
-      <footer className="mx-auto w-full max-w-2xl px-4 pb-8 text-center sm:px-6">
+      <footer className="mx-auto w-full max-w-2xl px-4 pb-10 text-center sm:px-6">
         <PublicFormFooter />
       </footer>
     </div>

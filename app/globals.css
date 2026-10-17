@@ -136,3 +136,47 @@
     @apply font-sans;
   }
 }
+
+/*
+ * One entrance, for the two pages a respondent lands on cold. CSS rather than
+ * JS on purpose: the public form has to be visible even if the script never
+ * runs, so it cannot start at `opacity: 0` waiting for hydration.
+ */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise-in {
+  animation: rise-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/*
+ * Reduced motion is honoured twice over: framer-motion reads the same setting
+ * through `MotionConfig reducedMotion="user"` (see components/motion-provider),
+ * and this rule flattens the CSS side — dialog keyframes, hover transitions.
+ *
+ * The spinner is the one exception. A spinner that does not spin reads as a
+ * frozen page, which is worse than the motion it is trying to avoid, so it keeps
+ * turning.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
+}

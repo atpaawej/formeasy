@@ -1,6 +1,7 @@
 "use client";
 
 import { PlusIcon, XIcon } from "lucide-react";
+import { motion } from "motion/react";
 
 import {
   AnswerInput,
@@ -8,6 +9,7 @@ import {
 } from "@/components/fields/answer-input";
 import { Button } from "@/components/ui/button";
 import { fieldLabel, isChoiceField, newOption, type Field } from "@/lib/fields";
+import { enter } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 /*
@@ -62,7 +64,19 @@ function PreviewField({
         disabled={disabled}
         invalid={Boolean(error)}
       />
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {/* Remounts on a new message, so the error lands instead of silently
+          replacing the previous one. */}
+      {error ? (
+        <motion.p
+          key={error}
+          initial={{ opacity: 0, y: -3 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={enter}
+          className="text-xs text-destructive"
+        >
+          {error}
+        </motion.p>
+      ) : null}
     </div>
   );
 }

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Show } from "@clerk/nextjs";
 
 import { ThemeToggle } from "@/components/theme-toggle";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
 
 const OPTIONS = ["Cleaner exports", "Branching logic", "File uploads"];

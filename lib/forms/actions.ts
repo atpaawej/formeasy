@@ -117,3 +117,23 @@ export async function unpublishForm(formId: string): Promise<void> {
   revalidatePath(`/dashboard/forms/${formId}/edit`);
   revalidatePath("/dashboard");
 }
+
+/**
+ * Close or reopen a published form. `accept_responses` is the only thing that
+ * changes: the form stays viewable, and its public link keeps working — a
+ * closed form says so instead of 404ing. See docs/design.md.
+ */
+export async function setAcceptResponses(
+  formId: string,
+  accept: boolean,
+): Promise<void> {
+  const ownerId = await requireUserId();
+  await db
+    .update(forms)
+    .set({ acceptResponses: accept, updatedAt: new Date() })
+    .where(and(eq(forms.id, formId), eq(forms.ownerId, ownerId)));
+
+  revalidatePath(`/dashboard/forms/${formId}`);
+  revalidatePath(`/dashboard/forms/${formId}/edit`);
+  revalidatePath("/dashboard");
+}

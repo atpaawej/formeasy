@@ -1,16 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { MoonIcon, SunIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
+// A hydration-safe "is this the client yet?" flag. The server snapshot is
+// `false`, so the first paint matches the server and never guesses at a theme.
+const subscribe = () => () => {};
+
+function useMounted() {
+  return useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  );
+}
+
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useMounted();
 
   const isDark = mounted && resolvedTheme === "dark";
 

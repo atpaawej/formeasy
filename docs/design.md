@@ -255,6 +255,53 @@ filled-in form to one bad field is unforgivable. Server actions +
 `meta` records a hashed IP, user agent, and referrer from day one, so abuse
 handling (honeypot, rate limit) can be added without a schema change.
 
+## Responses
+
+`/dashboard/forms/[id]` is the form's second tab, beside the builder. The list
+reads newest first — straight off the `(form_id, submitted_at desc)` index —
+because you scan the top of a list, you don't read it in order. Rows collapse to
+a timestamp; expanding one reveals every answer formatted for reading.
+
+**Formatting lives in `lib/forms/answers.ts`, and both the list and the CSV call
+it.** A choice answer stores an option id; the formatter turns it into today's
+label, joins multi-choice values, and falls back to the raw id when an option has
+since been removed. One formatter means the screen and the spreadsheet can't
+disagree — the bug where the export says `a1b2` and the page says "Yes".
+
+An answer whose field no longer exists is shown under its raw field id. Surfaced,
+never dropped: the data is real, it just has no question above it any more.
+
+Closing is the switch in the toolbar, writing `accept_responses`. Closing leaves
+the form **viewable** — a respondent following an old link sees the questions and
+a "no longer accepting responses" notice, not a 404.
+
+### CSV export
+
+`GET /api/forms/[id]/export`, a route handler rather than a Server Action: a
+download wants a plain authenticated GET that can set `Content-Disposition` and
+stream bytes without React in the way. It re-checks ownership — the proxy guards
+the path, but a route handler is still the place the data leaves the system.
+
+Columns:
+
+1. `Submitted at` — ISO 8601, UTC.
+2. One column per field, in form order, headed by the field's label.
+3. One column per orphaned answer, headed by the raw field id.
+
+Rows go **oldest first** — the spreadsheet is for reading history, the on-screen
+list is for seeing what just came in. Values are formatted by the same module the
+list uses, so exports follow a renamed label the same way the page does.
+
+A field deleted and re-created is a new id, so it gets its own column: that's the
+price of never reusing ids, and it's the right price — the alternative is two
+different questions' answers sharing a heading.
+
+Writing follows RFC 4180: a value containing a comma, quote, CR, or LF is quoted
+and its inner quotes doubled; rows end CRLF. The route prepends a UTF-8 BOM so a
+spreadsheet opens it as UTF-8 instead of mangling non-ASCII labels.
+
+Filename: the title, slugged — `"Team offsite"` → `team-offsite.csv`.
+
 ## Build order
 
 See [`roadmap.md`](roadmap.md).

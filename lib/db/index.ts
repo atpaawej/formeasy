@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
+import { withStrictSsl } from "./connection-string";
 import * as schema from "./schema";
 
 // The pooled connection string. The direct one is only for migrations.
@@ -18,7 +19,9 @@ const globalForDb = globalThis as unknown as { __formeasyPool?: Pool };
 const pool =
   globalForDb.__formeasyPool ??
   new Pool({
-    connectionString,
+    // Neon URLs say `sslmode=require`; `pg` warns on it, and v9 would weaken it.
+    // See connection-string.ts.
+    connectionString: withStrictSsl(connectionString),
     max: 10,
     // Without a connect timeout a stalled route to the database blocks the
     // request indefinitely instead of failing where we can see it.

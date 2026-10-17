@@ -38,7 +38,7 @@ export default async function PublicFormPage(props: PageProps<"/f/[id]">) {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-10 sm:px-6 sm:py-16">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-12 sm:px-6 sm:py-20">
         <PublicForm
           formId={form.id}
           title={form.title}
@@ -48,7 +48,7 @@ export default async function PublicFormPage(props: PageProps<"/f/[id]">) {
           accepting={form.acceptResponses}
         />
       </main>
-      <footer className="mx-auto w-full max-w-2xl px-4 pb-8 sm:px-6">
+      <footer className="mx-auto w-full max-w-2xl px-4 pb-10 sm:px-6">
         <PublicFormFooter />
       </footer>
     </div>

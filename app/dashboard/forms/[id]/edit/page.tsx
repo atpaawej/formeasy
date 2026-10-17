@@ -40,10 +40,13 @@ async function Editor({ params }: { params: Promise<{ id: string }> }) {
 
 function BuilderSkeleton() {
   return (
-    <div className="flex flex-col gap-6">
-      <Skeleton className="h-8 w-40" />
+    <div className="flex flex-col gap-8">
+      <div className="flex items-center justify-between gap-4">
+        <Skeleton className="h-5 w-20" />
+        <Skeleton className="h-8 w-40" />
+      </div>
       <Skeleton className="h-10 w-72" />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_220px]">
         <div className="flex flex-col gap-3">
           <Skeleton className="h-32 w-full rounded-xl" />
           <Skeleton className="h-32 w-full rounded-xl" />

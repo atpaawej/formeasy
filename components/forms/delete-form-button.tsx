@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,11 @@ import {
 } from "@/components/ui/dialog";
 import { deleteForm } from "@/lib/forms/actions";
 
+/*
+ * Deleting is destructive and irreversible, so it is behind a dialog that names
+ * the form. The confirm button reports its own pending state: a second click
+ * while the delete is in flight does nothing.
+ */
 export function DeleteFormButton({
   formId,
   title,
@@ -22,11 +27,25 @@ export function DeleteFormButton({
   title: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  function confirm() {
+    startTransition(async () => {
+      // Redirects to the dashboard on success.
+      await deleteForm(formId);
+    });
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        render={<Button variant="ghost" size="sm" className="text-muted-foreground" />}
+        render={
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+          />
+        }
       >
         Delete form
       </DialogTrigger>
@@ -39,14 +58,22 @@ export function DeleteFormButton({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pending}
+            onClick={() => setOpen(false)}
+          >
             Cancel
           </Button>
-          <form action={deleteForm.bind(null, formId)}>
-            <Button type="submit" variant="destructive" size="sm">
-              Delete form
-            </Button>
-          </form>
+          <Button
+            variant="destructive"
+            size="sm"
+            loading={pending}
+            onClick={confirm}
+          >
+            Delete form
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -51,6 +51,23 @@ Visual direction — palette, type, layout, and the rules behind them — is in
 - **Push decisions out of server actions into pure modules.** `lib/forms/submit.ts`
   holds `canAcceptResponses`, `readAnswersFromFormData`, and `hashIp`; the action
   is thin plumbing. That is what makes the gate testable without a request.
+- **One formatter for what a human reads.** `lib/forms/answers.ts` turns stored
+  answers into display text — option id → label, multi-choice joined, an answer
+  whose field is gone shown under its raw field id. The responses list and the
+  CSV both call it, so the screen and the export cannot disagree.
+- **Motion is tokens, not durations.** `lib/motion.ts` is the whole motion
+  language; pick a transition there instead of writing a duration at the call
+  site. `components/ui/button.tsx` is a client component (it's a motion
+  component), so its styles live apart in `button-variants.ts` for server
+  callers. The public form animates in CSS and must render with no JS. Details in
+  [`docs/design-system.md`](docs/design-system.md).
+- **A link stays a link.** Something that navigates is a `<Link>`/`<a>` wearing
+  `buttonVariants`, never `<Button render={<a />}>` — the latter warns (the
+  element stops being a real `<button>`) and adds `role="button"` to what is
+  still a link.
+- **Connection strings go through `withStrictSsl`.** Neon's `sslmode=require` is
+  pinned to `verify-full` (what it already means) so `pg` stops warning and v9
+  cannot quietly weaken it. Both `lib/db/index.ts` and `drizzle.config.ts` use it.
 
 ## Next.js 16 gotchas
 

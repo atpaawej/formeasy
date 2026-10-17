@@ -1,57 +1,83 @@
-import { Button as ButtonPrimitive } from "@base-ui/react/button"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "cn"
+"use client"
 
-const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
-        outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
-        ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
-        destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default:
-          "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-8",
-        "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-9",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
+import { Button as ButtonPrimitive } from "@base-ui/react/button"
+import { motion } from "motion/react"
+
+import {
+  buttonVariants,
+  type VariantProps,
+} from "@/components/ui/button-variants"
+import { Spinner } from "@/components/ui/spinner"
+import { tap } from "@/lib/motion"
+import { cn } from "@/lib/utils"
+
+/*
+ * The one button in the app.
+ *
+ * `loading` is a real state, not a styling one: it disables the button, marks it
+ * busy for assistive tech, shows a spinner in front of the label, and drops the
+ * press animation — so the same action cannot be fired twice while the first is
+ * still in flight.
+ *
+ * The press is framer-motion's `whileTap`, which composes with the button's own
+ * CSS translate because Tailwind v4 writes the `translate` property and motion
+ * writes `transform`. They do not fight.
+ *
+ * base-ui's Button and motion both declare an `onDrag`, with different
+ * signatures (a DOM drag event versus a gesture callback). It is dropped here:
+ * this button is never draggable, and every motion prop stays available.
+ *
+ * A link is not a button. Anything that navigates is a `<Link>`/`<a>` wearing
+ * `buttonVariants` — see app/page.tsx — because rendering one inside this
+ * component's `render` prop warns (base-ui: the element stops being a real
+ * <button>), and `role="button"` would cost a link its own semantics.
+ */
+type MotionButtonProps = Omit<
+  ButtonPrimitive.Props,
+  | "onDrag"
+  | "onDragStart"
+  | "onDragEnd"
+  | "onAnimationStart"
+  | "onAnimationEnd"
+  // base-ui lets `style` be a function of component state; motion's is a
+  // MotionStyle. Nothing here styles a button that way.
+  | "style"
+>
+
+const MotionButton = motion.create<MotionButtonProps, "button">(ButtonPrimitive)
+
+type ButtonProps = MotionButtonProps &
+  VariantProps<typeof buttonVariants> & {
+    /** Blocks interaction and shows a spinner in front of the label. */
+    loading?: boolean
   }
-)
 
 function Button({
   className,
   variant = "default",
   size = "default",
+  loading = false,
+  disabled,
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
+  const inert = disabled || loading
+
   return (
-    <ButtonPrimitive
+    <MotionButton
       data-slot="button"
+      data-loading={loading ? "" : undefined}
+      aria-busy={loading || undefined}
+      disabled={inert}
+      whileTap={inert ? undefined : { scale: 0.97 }}
+      transition={tap}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
-    />
+    >
+      {loading ? <Spinner className="size-3.5" /> : null}
+      {children}
+    </MotionButton>
   )
 }
 
-export { Button, buttonVariants }
+export { Button }

@@ -3,7 +3,7 @@
 Five phases. Each ships something usable and ends on a checkable gate. Tests are
 written inside the phase that creates the code, not saved up for a later pass.
 
-**Status:** phases 1–2 complete. Phase 3 is next.
+**Status:** phases 1–3 complete. Phase 4 is next.
 
 ## Phase 1 — Foundation & build
 

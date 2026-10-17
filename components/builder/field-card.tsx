@@ -35,10 +35,10 @@ export function FieldCard({
   onMove: (delta: number) => void;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4 transition-colors focus-within:border-ring/60">
+    <div className="rounded-xl border border-border bg-card p-5 transition-colors focus-within:border-ring/60">
       <FieldRenderer mode="edit" field={field} onFieldChange={onChange} />
 
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-3">
+      <div className="mt-5 flex items-center justify-between gap-3 border-t border-border pt-4">
         <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
           <Switch
             size="sm"

@@ -2,6 +2,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 
+import { MotionProvider } from "@/components/motion-provider";
 import { ThemeProvider } from "@/lib/theme-provider";
 import "./globals.css";
 
@@ -45,7 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             enableSystem
             disableTransitionOnChange
           >
-            {children}
+            <MotionProvider>{children}</MotionProvider>
           </ThemeProvider>
         </body>
       </html>

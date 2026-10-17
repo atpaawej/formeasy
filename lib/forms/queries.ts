@@ -2,6 +2,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { forms, responses } from "@/lib/db/schema";
+import type { Answers } from "@/lib/fields";
 
 export type FormSummary = {
   id: string;
@@ -49,4 +50,27 @@ export async function countResponses(formId: string): Promise<number> {
     .from(responses)
     .where(eq(responses.formId, formId));
   return row?.count ?? 0;
+}
+
+export type ResponseRow = {
+  id: string;
+  answers: Answers;
+  submittedAt: Date;
+};
+
+/**
+ * Every response to a form, newest first. One query serves both the list and the
+ * CSV export; the export re-sorts ascending because a spreadsheet reads better
+ * as a timeline. Rows are not paginated yet — see the roadmap's phase 4.
+ */
+export async function listResponses(formId: string): Promise<ResponseRow[]> {
+  return db
+    .select({
+      id: responses.id,
+      answers: responses.answers,
+      submittedAt: responses.submittedAt,
+    })
+    .from(responses)
+    .where(eq(responses.formId, formId))
+    .orderBy(desc(responses.submittedAt));
 }

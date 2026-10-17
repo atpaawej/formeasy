@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "motion/react";
 
 import { FieldRenderer } from "@/components/fields/field-renderer";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import {
 } from "@/lib/fields";
 import { submitResponse } from "@/lib/forms/public-actions";
 import { INITIAL_SUBMIT_STATE } from "@/lib/forms/submit-state";
+import { panel } from "@/lib/motion";
 
 /*
  * The answers are uncontrolled on purpose. A failed validation re-renders this
@@ -42,25 +44,32 @@ export function PublicForm({
     <form
       action={formAction}
       noValidate
-      className="flex flex-col gap-8 rounded-2xl border border-border bg-card p-6 sm:p-8"
+      className="rise-in flex flex-col gap-8 rounded-2xl border border-border bg-card p-6 sm:p-8"
     >
-      <header className="flex flex-col gap-2">
+      <header className="flex flex-col gap-2.5">
         <h1 className="font-serif text-2xl leading-tight text-balance">
           {title}
         </h1>
         {description ? (
-          <p className="text-sm leading-relaxed text-muted-foreground">
+          <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">
             {description}
           </p>
         ) : null}
       </header>
+
+      {!accepting ? (
+        <p className="rounded-xl border border-border bg-muted/60 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+          This form is closed. You can still read the questions, but it is no
+          longer accepting responses.
+        </p>
+      ) : null}
 
       {fields.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           This form has no questions yet.
         </p>
       ) : (
-        <div className="flex flex-col gap-7">
+        <div className="flex flex-col gap-8">
           {fields.map((field) => (
             <FieldRenderer
               key={field.id}
@@ -74,19 +83,30 @@ export function PublicForm({
         </div>
       )}
 
-      {state.formError ? (
-        <p className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-          {state.formError}
-        </p>
-      ) : null}
+      <AnimatePresence initial={false}>
+        {state.formError ? (
+          <motion.p
+            key={state.formError}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={panel}
+            className="overflow-hidden text-sm text-destructive"
+          >
+            <span className="block rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-3">
+              {state.formError}
+            </span>
+          </motion.p>
+        ) : null}
+      </AnimatePresence>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={pending || !accepting}>
-          {pending ? "Sending…" : settings.submitLabel || DEFAULT_SUBMIT_LABEL}
+        <Button type="submit" loading={pending} disabled={!accepting}>
+          {settings.submitLabel || DEFAULT_SUBMIT_LABEL}
         </Button>
         {!accepting ? (
           <span className="text-xs text-muted-foreground">
-            This form is no longer accepting responses.
+            Responses are closed.
           </span>
         ) : null}
       </div>
