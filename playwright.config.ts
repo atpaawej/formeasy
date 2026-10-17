@@ -20,7 +20,13 @@ try {
 }
 
 const PORT = Number(process.env.PORT ?? 3000);
-const baseURL = `http://127.0.0.1:${PORT}`;
+/*
+ * `localhost`, not `127.0.0.1`, and it matters. A Clerk *development* instance
+ * builds its handshake URLs from the request host, and it says `localhost` —
+ * start the suite on `127.0.0.1` and the session cookies land on a host the
+ * browser never visits again, so every later navigation bounces to sign-in.
+ */
+const baseURL = `http://localhost:${PORT}`;
 
 // The signed-in state the suite reuses, written once by the setup project.
 const authFile = path.join(__dirname, "playwright/.clerk/user.json");
