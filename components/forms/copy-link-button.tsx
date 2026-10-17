@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "motion/react";
-import { CheckIcon, LinkIcon } from "lucide-react";
+import { LinkIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { tap } from "@/lib/motion";
 
 /*
- * Copy the public link. The label never changes, so the button never changes
- * width mid-interaction; the icon spins in as the confirmation, and a polite
- * live region says "Link copied" for anyone not looking at the icon.
+ * Copy the public link.
+ *
+ * The button's own `success` state does the work: on a successful copy the
+ * check pops in and the label becomes "Link copied", then it returns after a
+ * beat. The action keeps one name throughout — the button is always the thing
+ * that copies the link — and a polite live region says "Link copied" for anyone
+ * not watching the icon.
  */
 export function CopyLinkButton({
   formId,
@@ -36,20 +38,20 @@ export function CopyLinkButton({
   }
 
   return (
-    <Button variant={variant} size={size} onClick={copy}>
-      <motion.span
-        key={copied ? "copied" : "copy"}
-        initial={{ opacity: 0, scale: 0.6 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={tap}
-        className="inline-flex"
+    <>
+      <Button
+        variant={variant}
+        size={size}
+        success={copied}
+        successLabel="Link copied"
+        onClick={copy}
       >
-        {copied ? <CheckIcon /> : <LinkIcon />}
-      </motion.span>
-      {copied ? "Link copied" : "Copy link"}
+        <LinkIcon />
+        Copy link
+      </Button>
       <span className="sr-only" aria-live="polite">
         {copied ? "Link copied" : ""}
       </span>
-    </Button>
+    </>
   );
 }

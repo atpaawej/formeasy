@@ -31,6 +31,18 @@ export const tap: Transition = {
   mass: 0.6,
 };
 
+/**
+ * A small thing arriving in place: a spinner where a label was, a check where a
+ * spinner was, an icon crossing over. A touch stiffer than `tap`, with a hint of
+ * overshoot, so the swap reads as a pop rather than a fade.
+ */
+export const pop: Transition = {
+  type: "spring",
+  stiffness: 720,
+  damping: 30,
+  mass: 0.5,
+};
+
 /** A panel expanding: a little travel, a little overshoot. */
 export const panel: Transition = {
   type: "spring",

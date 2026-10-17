@@ -61,6 +61,18 @@ Visual direction — palette, type, layout, and the rules behind them — is in
   component), so its styles live apart in `button-variants.ts` for server
   callers. The public form animates in CSS and must render with no JS. Details in
   [`docs/design-system.md`](docs/design-system.md).
+- **Button states are the button's job.** `loading` and `success` are real
+  states on `components/ui/button.tsx`, not a spinner and a check icon rebuilt at
+  each call site. The stand-in takes the label's place *and* its width, so a
+  button never resizes mid-action, and the resting label stays in the tree so the
+  accessible name survives.
+- **Page transitions, two layers.** The shell pages — landing, dashboard,
+  sign-in/up — arrive through React's `<ViewTransition>` (`components/
+  page-transition.tsx` plus the `::view-transition` CSS). Those pages use the
+  browser's snapshot-and-crossfade, which remounts nothing, so a form's tab
+  indicator can keep sliding underneath. The form's own two views stay on
+  `app/dashboard/forms/[id]/template.tsx`; don't lift it higher or the section
+  layout remounts on every tab switch.
 - **A link stays a link.** Something that navigates is a `<Link>`/`<a>` wearing
   `buttonVariants`, never `<Button render={<a />}>` — the latter warns (the
   element stops being a real `<button>`) and adds `role="button"` to what is

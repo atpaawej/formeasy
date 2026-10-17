@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { Show } from "@clerk/nextjs";
 
+import { PageTransition } from "@/components/page-transition";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { cn } from "@/lib/utils";
@@ -10,60 +11,62 @@ const OPTIONS = ["Cleaner exports", "Branching logic", "File uploads"];
 
 export default function Home() {
   return (
-    <div className="flex min-h-svh flex-col">
-      <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-5">
-        <Link href="/" className="text-sm font-medium tracking-tight">
-          formeasy
-        </Link>
-        <div className="flex items-center gap-1">
-          <ThemeToggle />
-          {/* Auth state is runtime data, so it streams in. Most visitors are
-              signed out, so that is what the static shell ships. */}
-          <Suspense fallback={<SignedOutActions />}>
-            <AuthActions />
-          </Suspense>
-        </div>
-      </header>
-
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6">
-        <section className="grid items-center gap-12 py-16 md:grid-cols-2 md:gap-16 md:py-24">
-          <div className="flex flex-col items-start gap-6">
-            <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-balance sm:text-5xl">
-              Make a form. Share a link. Read every answer.
-            </h1>
-            <p className="max-w-md text-base leading-relaxed text-muted-foreground">
-              An open-source alternative to Google Forms. Sign in to build a
-              form, publish a link, and anyone can respond. The people you ask
-              never need an account.
-            </p>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/sign-up"
-                className={cn(buttonVariants({ size: "lg" }), "px-4")}
-              >
-                Start building
-              </Link>
-              <Link
-                href="/sign-in"
-                className={cn(
-                  buttonVariants({ variant: "ghost", size: "lg" }),
-                  "px-4",
-                )}
-              >
-                Sign in
-              </Link>
-            </div>
+    <PageTransition>
+      <div className="flex min-h-svh flex-col">
+        <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-5">
+          <Link href="/" className="text-sm font-medium tracking-tight">
+            formeasy
+          </Link>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            {/* Auth state is runtime data, so it streams in. Most visitors are
+                signed out, so that is what the static shell ships. */}
+            <Suspense fallback={<SignedOutActions />}>
+              <AuthActions />
+            </Suspense>
           </div>
+        </header>
 
-          <FormPreview />
-        </section>
-      </main>
+        <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center px-6">
+          <section className="grid items-center gap-12 py-16 md:grid-cols-2 md:gap-16 md:py-24">
+            <div className="flex flex-col items-start gap-6">
+              <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-balance sm:text-5xl">
+                Make a form. Share a link. Read every answer.
+              </h1>
+              <p className="max-w-md text-base leading-relaxed text-muted-foreground">
+                An open-source alternative to Google Forms. Sign in to build a
+                form, publish a link, and anyone can respond. The people you ask
+                never need an account.
+              </p>
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/sign-up"
+                  className={cn(buttonVariants({ size: "lg" }), "px-4")}
+                >
+                  Start building
+                </Link>
+                <Link
+                  href="/sign-in"
+                  className={cn(
+                    buttonVariants({ variant: "ghost", size: "lg" }),
+                    "px-4",
+                  )}
+                >
+                  Sign in
+                </Link>
+              </div>
+            </div>
 
-      <footer className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6 text-xs text-muted-foreground">
-        <span>formeasy</span>
-        <span>Open source. Contributions welcome.</span>
-      </footer>
-    </div>
+            <FormPreview />
+          </section>
+        </main>
+
+        <footer className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-6 text-xs text-muted-foreground">
+          <span>formeasy</span>
+          <span>Open source. Contributions welcome.</span>
+        </footer>
+      </div>
+    </PageTransition>
   );
 }
 

@@ -104,6 +104,7 @@ component can import them — only the components that animate need `"use client
 | `enter` | 240 ms, ease-out | anything appearing or disappearing, and staggered lists |
 | `settle` | 320 ms, ease-out | a panel opening, a page/tab transition |
 | `tap` | stiff spring (640 / 34 / 0.6) | a button press |
+| `pop` | spring (720 / 30 / 0.5) | a small thing arriving in place: a spinner, a check |
 | `panel` | spring (420 / 38 / 0.9) | a row or card expanding |
 | `glide` | spring (520 / 42 / 0.8) | something sliding between two slots |
 | `EASE_OUT` | `[0.22, 1, 0.36, 1]` | the house curve; decelerating, gentle at the end |
@@ -122,18 +123,25 @@ Conventions:
 - **Layout animation for position, `AnimatePresence` for existence.** A tab
   indicator gets a shared `layoutId`; an expanding row gets a height animation
   around its content.
-- **Page transitions live in `app/dashboard/forms/[id]/template.tsx`,** and
-  *there* rather than higher up, because a `template` remounts its subtree. Put
-  it at `/dashboard` and the form's section layout would remount on every tab
-  switch, killing the sliding tab indicator.
+- **Page transitions come in two layers.** The shell pages — landing, dashboard,
+  sign-in/up — arrive through React's `<ViewTransition>` (see
+  `components/page-transition.tsx` and the `::view-transition` rules in
+  `globals.css`). The browser snapshots the outgoing and incoming pages and
+  crossfades between them, so nothing remounts and a transition costs no React
+  work. The form's own two views *can't* use that layer — a view transition over
+  the section switch would snapshot the tab pill mid-slide — so they keep a
+  `template` at `app/dashboard/forms/[id]/template.tsx`, and *there* rather than
+  higher up, because a template remounts its subtree and one at `/dashboard`
+  would remount the form's section layout on every tab switch.
 
 ### Where motion is, and where it deliberately isn't
 
 | surface | treatment |
 |---|---|
-| buttons | `whileTap` scale 0.97, dropped while loading/disabled |
+| buttons | `whileTap` scale 0.97, dropped while loading/disabled; a spinner or check pops into the label's place, `pop` |
 | nav tab indicator | shared `layoutId`, `glide` |
-| page/tab change | `template.tsx` fade + short rise, `settle` |
+| shell page change | view-transition crossfade + 8px rise (CSS, 240 ms) |
+| form tab change | `template.tsx` fade + short rise, `settle` |
 | lists (forms, fields, responses) | capped stagger in, `enter` |
 | expanding a response row | height, `panel` |
 | dialogs | base-ui keyframes on `data-open`/`data-closed`, tuned to house easing |
@@ -154,10 +162,15 @@ like one system.
 States are designed, not defaulted. Every action that takes time has:
 
 1. **Idle** — label, hover, focus ring (`ring-3 ring-ring/40` on inputs).
-2. **Pending** — `<Button loading>`: disabled, `aria-busy`, a spinner in front of
-   the label, and no press animation. This is what makes double-submit
-   impossible, which matters more on the public form than anywhere else.
-3. **Failure** — the error appears in place, the user's input stays put. A
+2. **Pending** — `<Button loading>`: disabled, `aria-busy`, a spinner that takes
+   the label's place, and no press animation. The resting label stays in the tree
+   (faded, not removed) so the button holds both its width and its accessible
+   name while it works. This is what makes double-submit impossible, which
+   matters more on the public form than anywhere else.
+3. **Completed** — `<Button success successLabel="…">`: a check pops in and the
+   label becomes the confirmation, then returns. `CopyLinkButton` is the one
+   caller; the button does not time its own reset.
+4. **Failure** — the error appears in place, the user's input stays put. A
    failed submit that clears the form is the worst outcome available.
 
 The same honesty applies to the builder's save indicator: it states *Saving…* or

@@ -158,9 +158,48 @@
 }
 
 /*
+ * Page transitions. React's <ViewTransition> (see components/page-transition)
+ * hands each navigation to the browser, which snapshots the outgoing and
+ * incoming pages and crossfades between them — no remount, so the form's tab
+ * indicator keeps sliding.
+ *
+ * Old content leaves quickly so it stops competing for attention; the new page
+ * arrives on the house curve and rises the same 8px the public pages do, so the
+ * whole app lands the same way. Never longer than `settle`.
+ */
+::view-transition-new(.page-in) {
+  animation:
+    240ms cubic-bezier(0.22, 1, 0.36, 1) both page-fade,
+    240ms cubic-bezier(0.22, 1, 0.36, 1) both page-rise;
+}
+
+::view-transition-old(.page-out) {
+  animation: 160ms cubic-bezier(0.22, 1, 0.36, 1) both page-fade reverse;
+}
+
+@keyframes page-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes page-rise {
+  from {
+    transform: translateY(8px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/*
  * Reduced motion is honoured twice over: framer-motion reads the same setting
  * through `MotionConfig reducedMotion="user"` (see components/motion-provider),
- * and this rule flattens the CSS side — dialog keyframes, hover transitions.
+ * and this rule flattens the CSS side — dialog keyframes, hover transitions,
+ * page transitions.
  *
  * The spinner is the one exception. A spinner that does not spin reads as a
  * frozen page, which is worse than the motion it is trying to avoid, so it keeps
@@ -171,8 +210,17 @@
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* View-transition pseudo-elements are not matched by `*`, so name them. */
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
   }
 
   .animate-spin {
