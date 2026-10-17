@@ -39,7 +39,13 @@ Visual direction — palette, type, layout, and the rules behind them — is in
 - **Public routes stay public.** `/f/*` is listed in the `proxy.ts` matcher as
   public. It covers the form, its thank-you page, and the submit Server Action
   (a POST to `/f/[id]`). A new public route gets added there in the same change
-  that adds the route.
+  that adds the route. The metadata routes need that entry more than they look
+  like they do: an `opengraph-image` URL has no file extension and `.txt`/`.xml`
+  are not in the matcher's static-file exclusion, so `/opengraph-image`,
+  `/twitter-image`, `/robots.txt`, and `/sitemap.xml` are answered by Clerk unless
+  they are listed — and a crawler handed the sign-in page gets no card at all. The
+  marketing pages (`/about`, `/self-hosting`) are public for the obvious reason,
+  and read with JavaScript off, like the public form.
 - **A public route re-checks itself.** The proxy lets a route past Clerk; it does
   not authenticate it. `/api/agent/*`, `/api/signup`, and `/auth.md` are in the
   matcher as public because Clerk cannot read a bearer token, and each agent route
@@ -95,6 +101,12 @@ Visual direction — palette, type, layout, and the rules behind them — is in
   in the values, the recent count, and the clock. The rate limit counts the
   `responses` table off `(form_id, submitted_at)` + `meta.ipHash` — no extra
   table, no cache, no migration. See [`docs/design.md`](docs/design.md).
+- **Analytics is Vercel-only, and the layout gates on that.** `<Analytics />`
+  injects a script fetched from `/_vercel/insights/script.js`, which only Vercel's
+  own edge serves. `app/layout.tsx` renders it only when `process.env.VERCEL` is
+  set, so a self-hosted image does not put a 404 in every visitor's network log.
+  The `<Suspense>` around it is required, not decorative: the component reads
+  `useSearchParams`, and Cache Components wants a boundary around that read.
 - **Every failure of ours goes through `reportError`** (`lib/observability.ts`),
   and every route has an `error.tsx` that is three lines because
   `components/route-error.tsx` owns the reporting and the fallback shape. The copy
@@ -104,6 +116,14 @@ Visual direction — palette, type, layout, and the rules behind them — is in
   answers into display text — option id → label, multi-choice joined, an answer
   whose field is gone shown under its raw field id. The responses list and the
   CSV both call it, so the screen and the export cannot disagree.
+- **The social cards are one layout and two fonts, both in the repo.**
+  `lib/og/card.tsx` is the only definition — the site-wide card and a form's card
+  render it with different words. The faces are `assets/fonts` (Geist + Source
+  Serif 4, OFL), read at runtime, so `outputFileTracingIncludes` in
+  `next.config.ts` is what carries them into the standalone Docker image: a
+  `readFile` is invisible to the tracer in a way an import is not. `lib/og/text.ts`
+  clamps the text because the card's canvas is fixed and cannot reflow — a long
+  title runs over the layout, not past it.
 - **Motion is tokens, not durations.** `lib/motion.ts` is the whole motion
   language; pick a transition there instead of writing a duration at the call
   site. `components/ui/button.tsx` is a client component (it's a motion

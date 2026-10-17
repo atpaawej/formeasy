@@ -12,12 +12,27 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 // is the discovery file an agent reads before it has a token at all.
 const isPublicRoute = createRouteMatcher([
   "/",
+  "/about",
+  "/agents",
+  "/self-hosting",
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/f/(.*)",
   "/auth.md",
   "/api/signup",
   "/api/agent/(.*)",
+  /*
+   * Metadata routes. A shared link is unfurled by a crawler that carries no
+   * session, so the cards and the discovery files have to answer without one —
+   * and their paths are not in the matcher's static-file exclusion (an
+   * `opengraph-image` URL has no extension, `.txt`/`.xml` are not listed), so
+   * without an entry here Clerk would answer them and the crawler would be sent
+   * to the sign-in page instead of an image.
+   */
+  "/opengraph-image(.*)",
+  "/twitter-image(.*)",
+  "/robots.txt",
+  "/sitemap.xml",
 ]);
 
 // Next.js 16 renamed middleware to proxy. Clerk's clerkMiddleware works here.

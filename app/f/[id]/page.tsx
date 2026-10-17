@@ -34,9 +34,18 @@ export async function generateMetadata(
   const form = await getFormById(id).catch(() => null);
   if (!form || form.status !== "published") return {};
 
+  /*
+   * A form with no description still needs something to say under the title in
+   * a link preview — an unfurl with a title and a blank line reads as broken.
+   * The sentence is the promise the public path makes: no account, no app.
+   */
+  const description =
+    form.description?.trim() || "Answer this form — no account needed.";
+
   return {
     title: form.title,
-    description: form.description ?? undefined,
+    description,
+    openGraph: { title: form.title, description },
   };
 }
 

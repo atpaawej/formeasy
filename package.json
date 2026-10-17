@@ -20,6 +20,7 @@
     "@agentonboard/sdk": "^0.3.0",
     "@base-ui/react": "^1.9.0",
     "@clerk/nextjs": "^7.9.16",
+    "@vercel/analytics": "^2.0.1",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.0",
     "drizzle-orm": "^0.45.4",

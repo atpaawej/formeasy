@@ -9,6 +9,16 @@ const nextConfig: NextConfig = {
    * sets. See docs/self-hosting.md.
    */
   output: process.env.NEXT_OUTPUT_STANDALONE === "true" ? "standalone" : undefined,
+  /*
+   * The social cards read their two fonts from `assets/fonts` at runtime, so the
+   * standalone image — whose whole job is to trace only what the app imports —
+   * has to be told to carry them. Without this the Docker build serves a 500 for
+   * every link preview while the same code works on Vercel. A file read is
+   * invisible to the tracer in a way an `import` is not.
+   */
+  outputFileTracingIncludes: {
+    "/*": ["./assets/fonts/**/*"],
+  },
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

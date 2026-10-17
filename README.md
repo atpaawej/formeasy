@@ -88,6 +88,7 @@ Open <http://localhost:3000>, sign up, and build a form.
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | no | Defaults to `/sign-in`. |
 | `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | no | Defaults to `/sign-up`. |
 | `ERROR_REPORT_URL` | no | Where error reports are POSTed. Unset means "log only". |
+| `NEXT_PUBLIC_SITE_URL` | no | This deployment's address, e.g. `forms.example.com`. Used for social-card URLs and `robots.txt`/`sitemap.xml`. Falls back to Vercel's hostname; unset elsewhere, link previews resolve against `localhost`. |
 | `AON_AUDIENCE` | no | This deployment's hostname. Set it and agents can sign in and use the app. Unset means agent access is off. |
 | `AON_ISSUER` | no | Only for a non-production AgentOnboard issuer. |
 | `NEXT_OUTPUT_STANDALONE` | no | Set by the `Dockerfile`; makes `next build` emit the standalone server. |
@@ -167,6 +168,7 @@ for what to know when you run more than one instance.
 | ORM | Drizzle |
 | Auth | Clerk |
 | UI | Tailwind 4 + shadcn/ui, with motion as a token language |
+| Analytics | Vercel Web Analytics (`@vercel/analytics`), rendered only when `VERCEL` is set — see [`docs/design.md`](docs/design.md#analytics) |
 
 ## Docs
 
