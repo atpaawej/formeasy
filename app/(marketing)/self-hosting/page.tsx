@@ -1,6 +1,11 @@
+import { CodeBlock } from "@/components/marketing/code-block";
 import { SELF_HOSTING_URL } from "@/lib/site";
 
-export const metadata = { title: "Self-hosting" };
+export const metadata = {
+  title: "Self-hosting",
+  description:
+    "Run formeasy on Vercel, in a container, or on a box with Node — and the three things that bite when it is more than one machine.",
+};
 
 /*
  * The self-hosting page. It is the *short* version on purpose: the full
@@ -140,18 +145,5 @@ export default function SelfHostingPage() {
         </div>
       </section>
     </>
-  );
-}
-
-/**
- * A shell block, not a code editor: mono for the machine bits, a hairline to set
- * it apart from the prose, and horizontal scroll rather than wrapping when a
- * command runs long.
- */
-function CodeBlock({ code }: { code: string }) {
-  return (
-    <pre className="overflow-x-auto rounded-xl border border-border bg-card p-4 font-mono text-xs leading-relaxed text-muted-foreground">
-      <code>{code}</code>
-    </pre>
   );
 }

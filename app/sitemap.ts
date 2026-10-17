@@ -17,6 +17,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: new URL("/", base).toString(), lastModified, priority: 1 },
     {
+      url: new URL("/agents", base).toString(),
+      lastModified,
+      priority: 0.7,
+    },
+    {
       url: new URL("/self-hosting", base).toString(),
       lastModified,
       priority: 0.6,

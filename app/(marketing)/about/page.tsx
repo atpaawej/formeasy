@@ -4,7 +4,11 @@ import { buttonVariants } from "@/components/ui/button-variants";
 import { GITHUB_URL } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
-export const metadata = { title: "About" };
+export const metadata = {
+  title: "About",
+  description:
+    "Why formeasy exists, the design rules it holds to, and what is deliberately out of scope.",
+};
 
 /*
  * The story page. It exists for the stranger who found the repository and wants

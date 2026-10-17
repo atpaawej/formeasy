@@ -27,6 +27,7 @@ app/
     layout.tsx
     page.tsx                        # landing
     about/page.tsx
+    agents/page.tsx
     self-hosting/page.tsx
   opengraph-image.tsx               # the site-wide social card
   twitter-image.tsx
@@ -185,6 +186,7 @@ CSV re-import — so the definition can't drift between them.
 |---|---|---|---|
 | GET | `/` | no | Landing, sign in |
 | GET | `/about` | **no** | The story, the principles, what is out of scope |
+| GET | `/agents` | **no** | AgentOnboard: the flow, and the boundaries |
 | GET | `/self-hosting` | **no** | Running it: Vercel, Docker, proxies |
 | GET | `/opengraph-image` · `/twitter-image` | **no** | The site-wide social card |
 | GET | `/robots.txt` · `/sitemap.xml` | **no** | Crawler metadata |
@@ -522,6 +524,19 @@ public form's rule: **every word reads with JavaScript off.** Only the theme
 toggle and the auth buttons are client components, and neither is needed to read
 the page. Sections are separated by hairlines and space rather than by cards,
 which is [`design-system.md`](design-system.md) applied to a long page.
+
+## Analytics
+
+Vercel Web Analytics, and only on Vercel. `app/layout.tsx` renders `<Analytics />`
+when `process.env.VERCEL` is set, because the script it injects is fetched from
+`/_vercel/insights/script.js` — an endpoint Vercel's own edge serves. On a
+self-hosted image the tag would be a 404 in every visitor's network log and
+nothing more, and a self-hosted copy is a first-class copy here. Unset means no
+script, no request, no third party.
+
+It is wrapped in `<Suspense>` because the component reads `useSearchParams` to
+attribute a route, and under Cache Components that read needs a boundary. It is
+cookieless by design: page views and routes, not people.
 
 ## Responses
 
