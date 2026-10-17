@@ -4,11 +4,20 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 // account. `/f/*` covers both the form and its thank-you page, and it also covers
 // the submit Server Action, which is a POST to /f/[id]. See AGENTS.md: a new
 // public route gets added here in the same change that adds the route.
+//
+// The agent routes are public for the same reason and with the same obligation:
+// Clerk cannot authenticate a bearer token, so it must not be the thing that
+// answers. Each one re-checks its own AgentOnboard token with `requireAgentUser`,
+// and the owner it writes under is the user id that token resolved to. `/auth.md`
+// is the discovery file an agent reads before it has a token at all.
 const isPublicRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/f/(.*)",
+  "/auth.md",
+  "/api/signup",
+  "/api/agent/(.*)",
 ]);
 
 // Next.js 16 renamed middleware to proxy. Clerk's clerkMiddleware works here.

@@ -15,6 +15,7 @@ model, the field schema, and the route map. Working conventions live in
 | Database | Neon (Postgres) |
 | ORM | Drizzle |
 | Auth | Clerk |
+| Agent access | AgentOnboard (RS256 bearer tokens) |
 | Hosting | Vercel |
 | UI | Tailwind + shadcn/ui |
 
@@ -33,13 +34,22 @@ app/
     submitted/page.tsx              # thank-you
   api/forms/[id]/
     export/route.ts                 # GET CSV — auth
+  api/agent/                        # the agent API — bearer token, not Clerk
+    forms/route.ts                  # list, create
+    forms/[id]/route.ts             # read, patch, delete
+    forms/[id]/publish|unpublish/   # lifecycle, validated
+    forms/[id]/responses|export/    # read what came in
+  api/signup/route.ts               # the only route that creates an account
+  auth.md/route.ts                  # the discovery file agents read first
 components/
   builder/                          # field editor, add/remove/reorder
   fields/                           # FieldRenderer — one renderer, two modes
 lib/
+  agent/                            # the agent gate: config, verify, accounts
   db/schema.ts                      # Drizzle tables
   db/index.ts                       # pooled Neon client
   fields.ts                         # the Field union + zod + defaults
+  forms/draft.ts                    # what a draft may be, shared by both writers
 drizzle/                            # migrations
 proxy.ts                            # Clerk, with public routes allowed
 ```
@@ -167,11 +177,101 @@ CSV re-import — so the definition can't drift between them.
 | POST | `/f/[id]` | **no** | Server Action: validate + store, then redirect |
 | GET | `/f/[id]/submitted` | **no** | Thank-you |
 | GET | `/api/forms/[id]/export` | yes | CSV download |
+| GET | `/auth.md` | **no** | Discovery file for agents: audience, endpoints, rejections |
+| GET | `/api/agent/forms` | agent | My forms |
+| POST | `/api/agent/forms` | agent | Create a form |
+| GET · PATCH · DELETE | `/api/agent/forms/[id]` | agent | Read · edit · delete |
+| POST | `/api/agent/forms/[id]/publish` | agent | Publish (validated), or `/unpublish` back to draft |
+| GET | `/api/agent/forms/[id]/responses` | agent | Responses as JSON |
+| GET | `/api/agent/forms/[id]/export` | agent | The same CSV, for an agent |
+| POST | `/api/signup` | agent | Create the calling account |
 
 Submission is a **Server Action**, which is a POST to its host route `/f/[id]` —
 not a separate API route. That keeps the failure path free: the action returns
 the errors, React re-renders the same route, and the uncontrolled inputs still
 hold the respondent's answers. A route handler would have to hand-roll that.
+
+`agent` in the Auth column means an AgentOnboard bearer token, verified in the
+route (see below), not a Clerk session.
+
+## Agent access (AgentOnboard)
+
+An agent — a person's assistant acting on their behalf — can create a formeasy
+account and then use the whole product: build a form, publish it, read what came
+in, export it. It does this with a short-lived RS256 token that
+[AgentOnboard](https://agentonboard.xyz) mints for a verified email address. The
+integration is modelled on Google's *Sign in with* flow, with the agent in the
+browser's chair.
+
+The pieces, and the one decision each makes:
+
+- **`AON_AUDIENCE` is the gate's only input we configure.** It is the bare
+  hostname this deployment serves on, and it comes from configuration, **never
+  from the request**. An audience read off `Host` is not a check — it is an
+  instruction, and obeying it is how a token minted for some other service gets
+  accepted here. Unset means agent access is off: routes fail closed with
+  `CONFIG_ERROR` (500) and `/auth.md` 404s rather than advertising a capability
+  the deployment does not have.
+- **`/auth.md` is rendered from that audience, not committed as a static file.**
+  AgentOnboard's guide suggests `public/auth.md`, but formeasy is self-hostable:
+  one baked-in hostname would be wrong for every deployment but one, and an
+  `## Audience` line that disagrees with the `audience` in the code is exactly
+  the drift the file exists to prevent. `app/auth.md/route.ts` builds it from
+  `AON_AUDIENCE` at request time (`connection()`, because Cache Components would
+  otherwise bake the build machine's value in), so the two agree by
+  construction.
+- **`lib/agent/verify.ts` owns the status mapping.** The SDK's
+  `verifyAgentAccount` does the cryptography; we decide what a failure becomes.
+  `ACCOUNT_REQUIRED` is **403**, not 401 — the token verified and the account is
+  missing, and a 401 would tell the agent to re-authenticate, which can never
+  create an account. `RESOLVER_ERROR` and `CONFIG_ERROR` are **500**: nobody's
+  request is wrong. Everything else is 401, uniformly, so a prober learns
+  nothing from the difference. It is a pure module on purpose, exercised against
+  AgentOnboard's published conformance vector with a pinned key set and no
+  network.
+- **The verified email is the join key, and Clerk is the identity store.**
+  `lib/agent/accounts.ts` looks the email up with `getUserList` — and checks
+  every returned row for an *exact* match, because Clerk's `emailAddress` filter
+  is a case-insensitive **partial** match, so `notada@example.com` comes back for
+  a lookup of `ada@example.com`. Taking the first row would hand an agent
+  somebody else's account.
+- **Identity is not a new principal.** An agent does not get a shadow account: a
+  verified email resolves to the human's Clerk user id, and the form an agent
+  creates is one the person opens in the dashboard the next morning. That is
+  what "use all features" means here — there is no second, lesser product for
+  agents to be confined to.
+
+### Creating an account
+
+Account creation lives in exactly one handler, `POST /api/signup`, and it is off
+the request path for every other route. An unknown identity gets
+`403 ACCOUNT_REQUIRED`; `/auth.md` names signup in that row, and the agent calls
+it with the same token and retries once. Wrapping every route in the creating
+version would bring an account into being as a side effect of whatever request an
+agent happened to make — including a read — and switching to it would not be
+greppable. `created` distinguishes sign-up from sign-in, and a repeat call signs
+in rather than duplicating: the resolver runs first, and its hit is what stops a
+second `createUser`.
+
+The account is created with `skipPasswordRequirement` — the agent cannot answer a
+password prompt, and AgentOnboard has already proved the inbox. It is otherwise
+an ordinary Clerk user; the person sets a password or signs in with a link later.
+
+### What this deliberately does not do
+
+**It does not stop a stranger from getting an account.** Anyone who can receive
+mail at an address AgentOnboard will verify can call `POST /api/signup` and have
+a formeasy account in one request, with no human clicking anything. That is the
+intended reading of "agents can create accounts", and it is also the single
+biggest decision in this document: if a thousand of them arrived tonight, that
+would be the design working, not failing. A deployment that does not want it
+leaves `AON_AUDIENCE` unset, or gates signup behind an allowlist before the
+`createAccount` call — the seam is one function.
+
+It also does not rate-limit signup. The submit path's rate limit
+(`lib/forms/submit.ts`) counts rows in `responses`; there is no equivalent count
+for account creation, because there is no users table to count. If signup needs a
+brake, that is where it goes, and it needs a store of its own.
 
 ## Builder
 

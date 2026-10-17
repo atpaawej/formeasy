@@ -29,6 +29,10 @@ CSV, and stop coming in the moment you close the form.
 - **Safe to leave running.** A rate limit, a honeypot, and payload size caps,
   with every failure of ours going to one error sink rather than to a stack
   trace.
+- **Agents can use it too.** Set one environment variable and an AI agent can
+  sign in with an [AgentOnboard](https://agentonboard.xyz) token, create an
+  account, and build and read forms over a small JSON API — the same forms that
+  show up in your dashboard.
 
 ## Quickstart
 
@@ -84,11 +88,39 @@ Open <http://localhost:3000>, sign up, and build a form.
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | no | Defaults to `/sign-in`. |
 | `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | no | Defaults to `/sign-up`. |
 | `ERROR_REPORT_URL` | no | Where error reports are POSTed. Unset means "log only". |
+| `AON_AUDIENCE` | no | This deployment's hostname. Set it and agents can sign in and use the app. Unset means agent access is off. |
+| `AON_ISSUER` | no | Only for a non-production AgentOnboard issuer. |
 | `NEXT_OUTPUT_STANDALONE` | no | Set by the `Dockerfile`; makes `next build` emit the standalone server. |
 
 Respondent IPs are only ever stored hashed (`RESPONSE_HASH_SALT` +
 `meta.ipHash`), which is what the rate limit counts. Rotating the salt makes
 existing hashes unlinkable — that is the point.
+
+## Agents
+
+formeasy speaks [AgentOnboard](https://agentonboard.xyz), so an assistant acting
+for someone can sign in as them and use the whole product. Set `AON_AUDIENCE` to
+your hostname and it is on:
+
+```bash
+AON_AUDIENCE=forms.example.com
+```
+
+That is the only switch. The app then serves `/auth.md` (the file agents read
+first, rendered from that same value so it cannot disagree with the check), and
+`/api/agent/*` accepts a bearer token instead of a session cookie. An agent that
+has no account yet gets `403 ACCOUNT_REQUIRED`, calls `POST /api/signup` with the
+same token, and carries on.
+
+Two things worth knowing before you turn it on:
+
+- **Anyone who can receive mail at a verified address can create an account.**
+  That is what "agents can create accounts" means, and for a public deployment it
+  is a deliberate choice, not an oversight — see the reasoning in
+  [`docs/design.md`](docs/design.md#agent-access-agentonboard). Leave
+  `AON_AUDIENCE` unset to keep it off entirely.
+- **The audience is configuration, never the request's `Host`.** If you serve the
+  same deployment on several hostnames, name the one you want agents to use.
 
 ## Deploy
 

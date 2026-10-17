@@ -34,7 +34,8 @@ same on your machine as in CI.
 Push as much logic as you can into a **pure module** so that this stays true —
 `lib/forms/submit.ts` is the model: the rate-limit rule, the size caps, and the
 IP hash are functions that take their inputs as arguments, and the Server Action
-is thin plumbing around them.
+is thin plumbing around them. `lib/agent/verify.ts` is the same move for the
+agent gate: the status mapping is a pure function, and the route is plumbing.
 
 ### The database suite
 

@@ -7,11 +7,8 @@ import { auth } from "@clerk/nextjs/server";
 
 import { db } from "@/lib/db";
 import { forms } from "@/lib/db/schema";
-import {
-  parseFields,
-  validateFormForPublish,
-  type Field,
-} from "@/lib/fields";
+import { validateFormForPublish } from "@/lib/fields";
+import { cleanDraft, cleanTitle, type FormDraft } from "@/lib/forms/draft";
 import { newFormId } from "@/lib/ids";
 import { reportError } from "@/lib/observability";
 
@@ -45,25 +42,6 @@ async function write<T>(where: string, run: () => Promise<T>): Promise<T> {
   }
 }
 
-const MAX_TITLE = 200;
-const MAX_DESCRIPTION = 2000;
-
-export type FormDraft = {
-  title: string;
-  description: string;
-  fields: Field[];
-};
-
-function cleanDraft(input: FormDraft) {
-  const fields = parseFields(input.fields);
-  if (!fields) throw new Error("Invalid fields payload");
-  return {
-    title: input.title.trim().slice(0, MAX_TITLE) || "Untitled form",
-    description: input.description.trim().slice(0, MAX_DESCRIPTION),
-    fields,
-  };
-}
-
 export async function createForm() {
   const ownerId = await requireUserId();
   const id = newFormId();
@@ -91,7 +69,7 @@ export async function renameForm(formId: string, title: string): Promise<void> {
     db
       .update(forms)
       .set({
-        title: title.trim().slice(0, MAX_TITLE) || "Untitled form",
+        title: cleanTitle(title),
         updatedAt: new Date(),
       })
       .where(and(eq(forms.id, formId), eq(forms.ownerId, ownerId))),

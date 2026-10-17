@@ -1,11 +1,11 @@
 # formeasy — Roadmap
 
-Five phases. Each ships something usable and ends on a checkable gate. Tests are
+Six phases. Each ships something usable and ends on a checkable gate. Tests are
 written inside the phase that creates the code, not saved up for a later pass.
 
-**Status:** phases 1–4 complete. Phase 5 is implemented — the two open items are
-the README screenshot and the demo instance, both of which need a deployed
-instance to produce.
+**Status:** phases 1–4 complete. Phases 5 and 6 are implemented — the two open
+items are the README screenshot and the demo instance, both of which need a
+deployed instance to produce.
 
 ## Phase 1 — Foundation & build
 
@@ -85,6 +85,27 @@ failures reach users as friendly messages instead of stack traces.
 
 **Done when:** a stranger clones the repo, adds their own Neon + Clerk keys, and
 deploys from the README alone.
+
+## Phase 6 — Agent access (AgentOnboard)
+
+**You can:** hand an AI agent the keys and let it build and read forms on your
+behalf.
+
+- `AON_AUDIENCE` config, and `/auth.md` rendered from it.
+- `lib/agent/verify.ts`: the local RS256 check and the 401 / 403 / 500 mapping,
+  pure and pinned to AgentOnboard's conformance vector.
+- `lib/agent/accounts.ts`: verified email → Clerk user, with an exact-match guard
+  against Clerk's partial email filter.
+- The agent API: list, create, read, patch, delete, publish, unpublish,
+  responses, CSV export.
+- `POST /api/signup`: the one handler that may create an account.
+- The agent routes added to the `proxy.ts` public matcher, each re-checking its
+  own token; `lib/forms/draft.ts` extracted so the builder's autosave and the API
+  clean a draft the same way.
+
+**Done when:** `AON_AUDIENCE` is set, `curl https://<host>/auth.md` returns
+markdown, and an agent token can go `403 ACCOUNT_REQUIRED` → `POST /api/signup` →
+create a form → publish it → read the responses, with no browser.
 
 ## After v1 — backlog
 

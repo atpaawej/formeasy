@@ -40,6 +40,31 @@ Visual direction — palette, type, layout, and the rules behind them — is in
   public. It covers the form, its thank-you page, and the submit Server Action
   (a POST to `/f/[id]`). A new public route gets added there in the same change
   that adds the route.
+- **A public route re-checks itself.** The proxy lets a route past Clerk; it does
+  not authenticate it. `/api/agent/*`, `/api/signup`, and `/auth.md` are in the
+  matcher as public because Clerk cannot read a bearer token, and each agent route
+  answers with `requireAgentUser` (`lib/agent/session.ts`) before it touches the
+  database. The owner a write lands under is the user id that token resolved to —
+  never a value from the body, never a path parameter.
+- **The agent audience is configuration, never the request.** `AON_AUDIENCE` is a
+  literal (`lib/agent/config.ts`); deriving it from `Host` would turn a check into
+  an instruction, which is how a token minted for another service is accepted
+  here. Unset means agent access is off and routes fail closed. `/auth.md` is
+  rendered from the same value (`lib/agent/auth-md.ts`) so the file an agent reads
+  cannot disagree with the check — which is also why it is a route, not a static
+  file in `public/`.
+- **The status mapping lives in `lib/agent/verify.ts`, not in a route.** 403 for
+  `ACCOUNT_REQUIRED`, 500 for `RESOLVER_ERROR`/`CONFIG_ERROR`, 401 for everything
+  else. It is pure, so it is tested against AgentOnboard's conformance vector with
+  a pinned key set and no network — the same move as `lib/forms/submit.ts`.
+- **Account creation is exactly one handler.** `POST /api/signup` is the only
+  route that may create an account; everywhere else a miss is `403`. Do not wrap
+  the creating version around other routes — an account would appear as a side
+  effect of a read, and the switch would not be greppable.
+- **Clerk's email filter is a partial match.** `getUserList({ emailAddress })`
+  matches case-insensitively on a substring, so `lib/agent/accounts.ts` checks the
+  returned rows for an exact address before trusting one. Taking `data[0]` hands an
+  agent someone else's account.
 - **Neon needs two strings.** App queries use `DATABASE_URL_POOLED`; `drizzle-kit`
   migrations use `DATABASE_URL`. Note this is inverted from the Vercel/Neon
   integration's naming — read the env file.
@@ -113,6 +138,11 @@ Visual direction — palette, type, layout, and the rules behind them — is in
 - **Cache Components is on** (`cacheComponents: true`). Anything that reads
   `auth()`, `cookies()`, `headers()`, dynamic `params`, or the DB goes inside a
   `<Suspense>` boundary. The dev overlay names the fix if one is missing.
+- **`export const dynamic` is gone** under Cache Components. To hold a route
+  handler or page until request time — `/auth.md` needs it, so the audience comes
+  from the running deployment and not from `next build` — `await connection()`
+  from `next/server` instead. A `route.ts` that only reads `process.env` is a
+  prerender candidate.
 - **`params` and `searchParams` are Promises.** `await` them, or pass the promise
   down and await it deeper so more of the shell can prerender.
 - **Tailwind 4** is CSS-first: tokens live in `@theme` in `app/globals.css`.

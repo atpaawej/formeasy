@@ -17,6 +17,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@agentonboard/sdk": "^0.3.0",
     "@base-ui/react": "^1.9.0",
     "@clerk/nextjs": "^7.9.16",
     "class-variance-authority": "^0.7.1",
