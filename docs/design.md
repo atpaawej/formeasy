@@ -23,7 +23,15 @@ model, the field schema, and the route map. Working conventions live in
 
 ```
 app/
-  page.tsx                          # landing + sign-in
+  (marketing)/                      # public shell: one header + footer
+    layout.tsx
+    page.tsx                        # landing
+    about/page.tsx
+    self-hosting/page.tsx
+  opengraph-image.tsx               # the site-wide social card
+  twitter-image.tsx
+  robots.ts                         # /robots.txt
+  sitemap.ts                        # /sitemap.xml
   dashboard/
     page.tsx                        # my forms
     forms/[id]/
@@ -32,6 +40,8 @@ app/
   f/[id]/
     page.tsx                        # public form (no auth)
     submitted/page.tsx              # thank-you
+    opengraph-image.tsx             # the form's own social card
+    twitter-image.tsx
   api/forms/[id]/
     export/route.ts                 # GET CSV — auth
   api/agent/                        # the agent API — bearer token, not Clerk
@@ -44,12 +54,17 @@ app/
 components/
   builder/                          # field editor, add/remove/reorder
   fields/                           # FieldRenderer — one renderer, two modes
+  marketing/                        # the shell and the hero question
+  responses/                        # the list, the toolbar, the empty state
 lib/
   agent/                            # the agent gate: config, verify, accounts
   db/schema.ts                      # Drizzle tables
   db/index.ts                       # pooled Neon client
   fields.ts                         # the Field union + zod + defaults
   forms/draft.ts                    # what a draft may be, shared by both writers
+  og/                               # the social card: fonts, layout, text fitting
+  site.ts                           # the site's address, from configuration
+assets/fonts/                       # the two faces the OG cards draw with (OFL)
 drizzle/                            # migrations
 proxy.ts                            # Clerk, with public routes allowed
 ```
@@ -169,6 +184,10 @@ CSV re-import — so the definition can't drift between them.
 | Method | Path | Auth | Does |
 |---|---|---|---|
 | GET | `/` | no | Landing, sign in |
+| GET | `/about` | **no** | The story, the principles, what is out of scope |
+| GET | `/self-hosting` | **no** | Running it: Vercel, Docker, proxies |
+| GET | `/opengraph-image` · `/twitter-image` | **no** | The site-wide social card |
+| GET | `/robots.txt` · `/sitemap.xml` | **no** | Crawler metadata |
 | GET | `/dashboard` | yes | List my forms |
 | POST | `/dashboard` | yes | Create form → redirect to builder |
 | GET | `/dashboard/forms/[id]/edit` | yes | Builder |
@@ -176,6 +195,7 @@ CSV re-import — so the definition can't drift between them.
 | GET | `/f/[id]` | **no** | Public form |
 | POST | `/f/[id]` | **no** | Server Action: validate + store, then redirect |
 | GET | `/f/[id]/submitted` | **no** | Thank-you |
+| GET | `/f/[id]/opengraph-image` · `/twitter-image` | **no** | The form's own social card |
 | GET | `/api/forms/[id]/export` | yes | CSV download |
 | GET | `/auth.md` | **no** | Discovery file for agents: audience, endpoints, rejections |
 | GET | `/api/agent/forms` | agent | My forms |
@@ -450,6 +470,58 @@ inside it, which means the status code cannot be settled after streaming starts 
 and a respondent arriving cold has no shell worth streaming ahead of the form
 itself. See `app/f/[id]/page.tsx`.
 
+## Social cards
+
+A link to a form should unfurl as the form, not as a generic website — and the
+landing should unfurl as itself. Two file conventions do the work rather than
+hand-written tags: `app/opengraph-image.tsx` draws the site-wide card,
+`app/f/[id]/opengraph-image.tsx` draws a form's, and the `twitter-image.tsx`
+beside each re-uses it so the Open Graph and Twitter tags cannot disagree.
+
+Decisions worth recording:
+
+- **One layout, two sets of words.** `lib/og/card.tsx` is the only definition and
+  both routes render it. A form's card and the landing's card are meant to read as
+  the same product; a second layout would drift, and there is nothing in it to
+  justify that.
+- **The fonts are files in the repo, not a fetch.** `assets/fonts` holds Geist and
+  Source Serif 4 — the same split the app makes, sans for chrome and serif for the
+  voice. next/og ships Geist as its default, but passing any `fonts` array
+  *replaces* that default, so both have to be supplied. A card then renders with
+  no network. `outputFileTracingIncludes` in `next.config.ts` is what makes the
+  standalone Docker image carry them: a runtime `readFile` is invisible to the
+  tracer in a way an import is not, and without it every preview is a 500 on a
+  self-hosted box while the same code works on Vercel.
+- **The canvas never reflows, so the text is fitted before it is drawn.** Satori
+  lays the card out once at a fixed size: a headline that runs long does not push
+  anything down, it runs over it. `lib/og/text.ts` clamps the title and the
+  description, purely, so the fit is pinned by a test instead of discovered on a
+  share. The type scale in the card assumes those caps.
+- **A draft's card is the brand card.** `/f/[id]` 404s for a draft, so its title
+  must not be drawn here either — an unpublished link should not announce its
+  title in a chat app. An unreadable form falls back the same way, for the reason
+  metadata is decoration: a failed read must not break the unfurl.
+- **`NEXT_PUBLIC_SITE_URL` is configuration, never the request.** A crawler has no
+  session and no `Host` worth trusting. `lib/site.ts` resolves the address from the
+  environment, falls back to Vercel's own hostname, and stays silent when there is
+  nothing to read — a guessed `localhost` in production is worse than no base.
+  `/robots.txt` and `/sitemap.xml` are built from the same value, so the three
+  cannot disagree.
+- **Every metadata route is in the proxy's public list.** Their paths are not
+  covered by the matcher's static-file exclusion — an `opengraph-image` URL has no
+  extension, and `.txt`/`.xml` are not in that list — so without an entry Clerk
+  would answer them and a crawler would be handed the sign-in page instead of an
+  image.
+
+## Marketing pages
+
+The landing, About, and Self-hosting share one shell — `app/(marketing)` — so
+there is one header, one footer, and one page transition across all three. They
+are in the proxy's public list for the same reason `/f/*` is, and they follow the
+public form's rule: **every word reads with JavaScript off.** Only the theme
+toggle and the auth buttons are client components, and neither is needed to read
+the page. Sections are separated by hairlines and space rather than by cards,
+which is [`design-system.md`](design-system.md) applied to a long page.
 
 ## Responses
 
