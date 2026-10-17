@@ -48,6 +48,18 @@ Visual direction — palette, type, layout, and the rules behind them — is in
   network, no database — because the submit action is tested against a mocked
   `@/lib/db`. Anything that needs a real Postgres round-trip goes in a
   `*.integration.test.ts` gated on `RUN_DB_TESTS=1` and run with `pnpm test:db`.
+- **The browser suite is the one that leaves the machine.** `pnpm test:e2e` runs
+  Playwright against a production build (`pnpm build && pnpm start`) and a real
+  Clerk development instance, signs in as a `+clerk_test` user, and answers the
+  form from a separate signed-out context — "respondents need no account" is a
+  promise the proxy matcher can break without the signed-in owner noticing. It
+  writes real rows, so the setup and teardown projects delete every form the
+  test user owns; a killed run is swept by the next one. When the Clerk secrets
+  are absent the CI job skips rather than fails. Everything else stays hermetic.
+- **`output: "standalone"` stays opt-in.** `next.config.ts` turns it on only for
+  `NEXT_OUTPUT_STANDALONE=true`, which the `Dockerfile` sets. Vercel builds the
+  app itself and does not need the folder; hard-coding it on changes what every
+  build emits for one consumer. See [`docs/self-hosting.md`](docs/self-hosting.md).
 - **Push decisions out of server actions into pure modules.** `lib/forms/submit.ts`
   holds `canAcceptResponses`, `readAnswersFromFormData`, and `hashIp`; the action
   is thin plumbing. That is what makes the gate testable without a request.

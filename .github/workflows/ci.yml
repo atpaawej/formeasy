@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A force-push to a pull request cancels the run it superseded. A push to main
+# always finishes, because that is the run that ships.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, types, unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Installs pnpm from package.json's `packageManager` field, puts the
+      # runtime on PATH, and runs `pnpm install` — one step instead of three.
+      - uses: pnpm/setup@v3
+        with:
+          runtime: node@22
+          cache: true
+
+      - run: pnpm lint
+      - run: pnpm typecheck
+
+      # Hermetic by design: no network, no database, so this needs no secrets.
+      # See CONTRIBUTING.md.
+      - run: pnpm test

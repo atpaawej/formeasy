@@ -1,0 +1,32 @@
+# Everything the build does not need. Keeping this tight keeps the build
+# context small, and keeping `.env*` out of it keeps secrets out of the image
+# layers — the build takes the one variable it needs as a build argument.
+node_modules
+.next
+out
+build
+coverage
+test-results
+playwright-report
+blob-report
+playwright
+
+.git
+.gitignore
+.github
+
+.env*
+!.env.example
+
+Dockerfile
+docker-compose.yml
+README.md
+CONTRIBUTING.md
+LICENSE
+docs
+
+# A contributor's editor state, not the app's.
+.vscode
+.idea
+*.tsbuildinfo
+next-env.d.ts

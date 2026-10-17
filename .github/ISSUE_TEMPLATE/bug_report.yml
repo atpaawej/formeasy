@@ -1,0 +1,77 @@
+name: Bug report
+description: Something is broken, or behaves differently from what the docs say.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A bug someone else can reproduce is a bug that gets fixed. The two fields
+        that matter most are the steps and what you expected instead.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected to see instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a form with a choice question
+        2. Publish it and open the link
+        3. ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where
+      multiple: true
+      options:
+        - The builder
+        - The public form
+        - Responses and CSV export
+        - Publishing or closing a form
+        - Sign in / accounts
+        - Self-hosting or deploy
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      value: |
+        - Running on: (localhost / Vercel / Docker / other)
+        - Node version:
+        - Browser:
+        - Commit or version:
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: |
+        Anything from the server log, the browser console, or the error reporter.
+        Remove form ids and answers you would not want public.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you file
+      options:
+        - label: I searched the existing issues and the roadmap.
+          required: true
+        - label: This reproduces on the latest `main`.
+          required: false

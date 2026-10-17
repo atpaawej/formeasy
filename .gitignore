@@ -13,6 +13,12 @@
 # testing
 /coverage
 
+# end-to-end tests — the signed-in storage state and Playwright's artifacts
+/playwright/.clerk
+/test-results
+/playwright-report
+/blob-report
+
 # next.js
 /.next/
 /out/

@@ -1,0 +1,65 @@
+# The whole thing on one machine: Postgres, migrations, the app.
+#
+#   cp .env.example .env      # fill in the two Clerk keys and RESPONSE_HASH_SALT
+#   docker compose up --build
+#   open http://localhost:3000
+#
+# Compose reads `.env` in this directory for the values below, so the database
+# lines in that file are ignored here: this file runs its own Postgres. To point
+# at Neon instead, see "Docker, with a hosted database" in docs/self-hosting.md.
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: formeasy
+      POSTGRES_PASSWORD: formeasy
+      POSTGRES_DB: formeasy
+    volumes:
+      - formeasy-db:/var/lib/postgresql/data
+    healthcheck:
+      # The app is started by a migration, so "the database is up" has to mean
+      # "it answers queries", not "the container is running".
+      test: ["CMD-SHELL", "pg_isready -U formeasy -d formeasy"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: .
+      target: migrate
+    environment:
+      # Migrations take the direct connection; the running app takes the pooler.
+      # With Postgres in the same compose network they are the same string.
+      DATABASE_URL: postgres://formeasy:formeasy@db:5432/formeasy
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: runner
+      args:
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?missing — copy .env.example to .env and fill it in}
+    environment:
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?missing — copy .env.example to .env and fill it in}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?missing — copy .env.example to .env and fill it in}
+      NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
+      NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
+      DATABASE_URL_POOLED: postgres://formeasy:formeasy@db:5432/formeasy
+      RESPONSE_HASH_SALT: ${RESPONSE_HASH_SALT:?missing — copy .env.example to .env and fill it in}
+      ERROR_REPORT_URL: ${ERROR_REPORT_URL:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      # `up` would otherwise race the first request against the first migration.
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  formeasy-db:

@@ -3,7 +3,9 @@
 Five phases. Each ships something usable and ends on a checkable gate. Tests are
 written inside the phase that creates the code, not saved up for a later pass.
 
-**Status:** phases 1–4 complete. Phase 5 is next.
+**Status:** phases 1–4 complete. Phase 5 is implemented — the two open items are
+the README screenshot and the demo instance, both of which need a deployed
+instance to produce.
 
 ## Phase 1 — Foundation & build
 
@@ -66,13 +68,20 @@ failures reach users as friendly messages instead of stack traces.
 
 **You can:** hand it to a stranger.
 
-- LICENSE (decide MIT vs AGPL).
-- README: what it is, screenshot, quickstart, env vars.
-- CONTRIBUTING + issue / PR templates.
-- Self-host guide: Vercel one-click and Docker.
-- CI: typecheck, lint, test on PR; preview deploys.
-- One e2e test: build → publish → fill → submit → export.
-- Demo instance.
+- [x] LICENSE — MIT.
+- [x] README: what it is, screenshot, quickstart, env vars.
+- [ ] Screenshot. The slot is marked in the README; it needs a real instance and
+  a browser, so it is saved for the first deploy rather than committed as a
+  placeholder.
+- [x] CONTRIBUTING + issue / PR templates.
+- [x] Self-host guide: Vercel one-click and Docker
+  ([`self-hosting.md`](self-hosting.md)).
+- [x] CI: typecheck, lint, and the hermetic test suite on every pull request; the
+  browser suite runs too when Clerk secrets are configured. Preview deploys come
+  from Vercel's Git integration, which needs no workflow.
+- [x] One e2e test: build → publish → fill → submit → export, against a
+  production build and with the respondent signed out.
+- [ ] Demo instance.
 
 **Done when:** a stranger clones the repo, adds their own Neon + Clerk keys, and
 deploys from the README alone.

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: The roadmap
+    url: https://github.com/atpaawej/formeasy/blob/main/docs/roadmap.md
+    about: What is built, what is next, and the v1 backlog. Most "can it do X?" questions are answered here.
+  - name: Self-hosting guide
+    url: https://github.com/atpaawej/formeasy/blob/main/docs/self-hosting.md
+    about: Deploying to Vercel or Docker, plus the Neon and Clerk setup.
+  - name: Contributing
+    url: https://github.com/atpaawej/formeasy/blob/main/CONTRIBUTING.md
+    about: Setup, the three test suites, and the conventions worth knowing before a pull request.

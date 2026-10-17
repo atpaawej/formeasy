@@ -1,0 +1,96 @@
+name: E2E
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# The browser suite mutates a database, so two runs on the same branch would be
+# writing over each other. Unlike CI, this one always cancels: the older result
+# is not worth waiting for.
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    name: Build → publish → fill → submit → export
+    runs-on: ubuntu-latest
+
+    # A throwaway Postgres, so the only secret this job needs is Clerk. The app
+    # talks to it without TLS; `withStrictSsl` only touches a URL that asks for
+    # SSL. See lib/db/connection-string.ts.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: formeasy
+          POSTGRES_PASSWORD: formeasy
+          POSTGRES_DB: formeasy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U formeasy -d formeasy"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://formeasy:formeasy@127.0.0.1:5432/formeasy
+      DATABASE_URL_POOLED: postgres://formeasy:formeasy@127.0.0.1:5432/formeasy
+      RESPONSE_HASH_SALT: ci-not-a-secret
+      NEXT_PUBLIC_CLERK_SIGN_IN_URL: /sign-in
+      NEXT_PUBLIC_CLERK_SIGN_UP_URL: /sign-up
+
+    steps:
+      # Forks and outside contributors do not get repository secrets, and a red
+      # job they cannot fix is worse than no job at all. Everything below is
+      # gated on this check.
+      - name: Check for Clerk credentials
+        id: credentials
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+        run: |
+          if [ -n "$CLERK_SECRET_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Browser suite skipped::CLERK_SECRET_KEY and NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY are not set. The suite needs a Clerk development instance — see CONTRIBUTING.md."
+          fi
+
+      - if: steps.credentials.outputs.present == 'true'
+        uses: actions/checkout@v7
+
+      - if: steps.credentials.outputs.present == 'true'
+        uses: pnpm/setup@v3
+        with:
+          runtime: node@22
+          cache: true
+
+      - if: steps.credentials.outputs.present == 'true'
+        name: Migrate
+        run: pnpm db:migrate
+
+      - if: steps.credentials.outputs.present == 'true'
+        name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - if: steps.credentials.outputs.present == 'true'
+        name: Run the suite
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+        # `pnpm build && pnpm start` runs inside the Playwright webServer, so
+        # this exercises the production build, not `next dev`.
+        run: pnpm test:e2e
+
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7

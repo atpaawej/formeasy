@@ -1,0 +1,47 @@
+name: Feature request
+description: Suggest something the product should do.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        [`docs/roadmap.md`](https://github.com/atpaawej/formeasy/blob/main/docs/roadmap.md)
+        has the v1 backlog — multi-page forms, branching logic, file uploads, teams,
+        and the rest. If it is on that list, say so: a request tied to a real use
+        case moves it up.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: |
+        What are you trying to do that the product does not let you do? Describe
+        the situation, not the solution — it is usually the most useful part.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do instead today
+      description: Another tool, a workaround, or nothing. This is how we judge demand.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you file
+      options:
+        - label: I read the roadmap and this is not already planned.
+          required: true
+        - label: I am willing to open a pull request for it.
+          required: false
