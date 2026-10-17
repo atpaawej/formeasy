@@ -1,26 +1,138 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
+/*
+ * formeasy tokens.
+ * canvas = page backdrop, paper = surfaces/inputs, ink = text, line = hairlines.
+ * cobalt is the single accent. It is deliberately deeper than Tailwind blue-500.
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-source-serif);
+  --font-heading: var(--font-geist-sans);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --background: #f6f7f9; /* canvas */
+  --foreground: #16181d; /* ink */
+  --card: #ffffff; /* paper */
+  --card-foreground: #16181d;
+  --popover: #ffffff;
+  --popover-foreground: #16181d;
+  --primary: #2557e8; /* cobalt */
+  --primary-foreground: #ffffff;
+  --secondary: #eef0f4;
+  --secondary-foreground: #16181d;
+  --muted: #eef0f4;
+  --muted-foreground: #5b6472; /* graphite */
+  --accent: #eceff4;
+  --accent-foreground: #16181d;
+  --destructive: #d93a3a;
+  --border: #e4e7ec; /* line */
+  --input: #e4e7ec;
+  --ring: #2557e8;
+  --chart-1: #2557e8;
+  --chart-2: #5b6472;
+  --chart-3: #98a1b0;
+  --chart-4: #c9ced6;
+  --chart-5: #e4e7ec;
+  --radius: 0.625rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #16181d;
+  --sidebar-primary: #2557e8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #eceff4;
+  --sidebar-accent-foreground: #16181d;
+  --sidebar-border: #e4e7ec;
+  --sidebar-ring: #2557e8;
+}
+
+.dark {
+  --background: #0e1013; /* canvas */
+  --foreground: #eceef2; /* ink */
+  --card: #16191f; /* paper */
+  --card-foreground: #eceef2;
+  --popover: #16191f;
+  --popover-foreground: #eceef2;
+  --primary: #6e93ff; /* cobalt */
+  --primary-foreground: #0e1013;
+  --secondary: #1d2129;
+  --secondary-foreground: #eceef2;
+  --muted: #1d2129;
+  --muted-foreground: #98a1b0; /* graphite */
+  --accent: #222732;
+  --accent-foreground: #eceef2;
+  --destructive: #e5645e;
+  --border: #272c35;
+  --input: #2a303a;
+  --ring: #6e93ff;
+  --chart-1: #6e93ff;
+  --chart-2: #98a1b0;
+  --chart-3: #5b6472;
+  --chart-4: #3a414d;
+  --chart-5: #272c35;
+  --sidebar: #16191f;
+  --sidebar-foreground: #eceef2;
+  --sidebar-primary: #6e93ff;
+  --sidebar-primary-foreground: #0e1013;
+  --sidebar-accent: #222732;
+  --sidebar-accent-foreground: #eceef2;
+  --sidebar-border: #272c35;
+  --sidebar-ring: #6e93ff;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

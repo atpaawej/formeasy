@@ -7,3 +7,60 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# formeasy
+
+Open-source Google Forms alternative: build a form, publish a link, collect
+responses, export CSV.
+
+Stack, data model, field schema, and routes live in
+[`docs/design.md`](docs/design.md); the build sequence and current phase live in
+[`docs/roadmap.md`](docs/roadmap.md). Read the design doc before changing the
+data model, the field schema, or the submit path.
+
+Visual direction — palette, type, layout, and the rules behind them — is in
+[`docs/design-system.md`](docs/design-system.md).
+
+## Conventions
+
+- **`lib/fields.ts` is the single source of truth for the field schema.** Adding
+  a field type is one edit there: the `Field` union, its default, and the zod
+  builder. The builder, `FieldRenderer`, and the submit validator all derive from
+  it. A field type that exists in one of those and not the others is the bug.
+- **Field ids and option ids are permanent.** Answers are keyed by id, so
+  renaming a label or option is free and minting an id twice is not.
+- **One renderer, two modes.** `FieldRenderer mode="preview" | "edit"`. The
+  builder and the public form share it so they cannot drift.
+- **The submit path re-validates** with `validateAnswers(fields, ...)` — which
+  builds on `fieldsToZod(fields)` — regardless of what the client sent. The
+  server is the gate.
+- **Autosave writes the whole `fields` array.** Validate on publish and on
+  submit; half-edited fields save freely.
+- **Public routes stay public.** `/f/*` is listed in the `proxy.ts` matcher as
+  public. It covers the form, its thank-you page, and the submit Server Action
+  (a POST to `/f/[id]`). A new public route gets added there in the same change
+  that adds the route.
+- **Neon needs two strings.** App queries use `DATABASE_URL_POOLED`; `drizzle-kit`
+  migrations use `DATABASE_URL`. Note this is inverted from the Vercel/Neon
+  integration's naming — read the env file.
+- **Tests live next to the module** as `<module>.test.ts`, using the `@/*` alias
+  so they import the same specifiers the app does. `pnpm test` is hermetic — no
+  network, no database — because the submit action is tested against a mocked
+  `@/lib/db`. Anything that needs a real Postgres round-trip goes in a
+  `*.integration.test.ts` gated on `RUN_DB_TESTS=1` and run with `pnpm test:db`.
+- **Push decisions out of server actions into pure modules.** `lib/forms/submit.ts`
+  holds `canAcceptResponses`, `readAnswersFromFormData`, and `hashIp`; the action
+  is thin plumbing. That is what makes the gate testable without a request.
+
+## Next.js 16 gotchas
+
+- **The proxy file is `proxy.ts`** (named export `proxy`), not `middleware.ts`.
+- **Server Functions are POSTs to their host route.** A proxy matcher that
+  excludes a path skips them, so every Server Function re-checks auth itself.
+- **Cache Components is on** (`cacheComponents: true`). Anything that reads
+  `auth()`, `cookies()`, `headers()`, dynamic `params`, or the DB goes inside a
+  `<Suspense>` boundary. The dev overlay names the fix if one is missing.
+- **`params` and `searchParams` are Promises.** `await` them, or pass the promise
+  down and await it deeper so more of the shell can prerender.
+- **Tailwind 4** is CSS-first: tokens live in `@theme` in `app/globals.css`.
+  There is no `tailwind.config.ts`.
