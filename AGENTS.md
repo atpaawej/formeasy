@@ -51,6 +51,18 @@ Visual direction — palette, type, layout, and the rules behind them — is in
 - **Push decisions out of server actions into pure modules.** `lib/forms/submit.ts`
   holds `canAcceptResponses`, `readAnswersFromFormData`, and `hashIp`; the action
   is thin plumbing. That is what makes the gate testable without a request.
+- **Abuse handling is the same kind of decision.** `lib/forms/submit.ts` holds the
+  size caps (`exceedsSubmissionSize`) and the rate-limit rule (`isRateLimited`);
+  `lib/forms/honeypot.ts` holds the honeypot's name, in its own module because the
+  *form* imports it and must not drag `node:crypto` in with it. The action hands
+  in the values, the recent count, and the clock. The rate limit counts the
+  `responses` table off `(form_id, submitted_at)` + `meta.ipHash` — no extra
+  table, no cache, no migration. See [`docs/design.md`](docs/design.md).
+- **Every failure of ours goes through `reportError`** (`lib/observability.ts`),
+  and every route has an `error.tsx` that is three lines because
+  `components/route-error.tsx` owns the reporting and the fallback shape. The copy
+  a person reads never carries the cause: they can act on "try again", and the
+  cause belongs in the log.
 - **One formatter for what a human reads.** `lib/forms/answers.ts` turns stored
   answers into display text — option id → label, multi-choice joined, an answer
   whose field is gone shown under its raw field id. The responses list and the

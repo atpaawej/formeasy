@@ -16,13 +16,20 @@ type AnswerInputProps = {
   defaultValue?: AnswerValue;
   disabled?: boolean;
   invalid?: boolean;
+  /** Id of the message explaining `invalid`, so the two are read together. */
+  describedBy?: string;
 };
 
 const ROW_CLASS =
   "flex cursor-pointer items-center gap-3 rounded-lg border border-border px-3 py-2.5 text-sm transition-colors hover:bg-muted/50 has-[:checked]:border-primary/60 has-[:checked]:bg-primary/5 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60";
 
+/*
+ * `text-base md:text-sm` is deliberate in both classes below: an input under
+ * 16px makes iOS zoom the whole page when it takes focus, which is the single
+ * most jarring thing a form can do on a phone.
+ */
 const SELECT_CLASS =
-  "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-input/30";
+  "h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-base outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-60 md:text-sm dark:bg-input/30";
 
 /*
  * The answer control, driven by the field type.
@@ -39,6 +46,7 @@ export function AnswerInput({
   defaultValue,
   disabled,
   invalid,
+  describedBy,
 }: AnswerInputProps) {
   const editable = onValueChange !== undefined;
   const asString = typeof value === "string" ? value : "";
@@ -50,6 +58,7 @@ export function AnswerInput({
     name: field.id,
     disabled,
     "aria-invalid": invalid || undefined,
+    "aria-describedby": describedBy,
   };
 
   switch (field.type) {

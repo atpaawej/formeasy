@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   CheckIcon,
@@ -15,7 +15,13 @@ import { DeleteFormButton } from "@/components/forms/delete-form-button";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Spinner } from "@/components/ui/spinner";
-import { cloneField, newField, type Field, type FieldType } from "@/lib/fields";
+import {
+  FIELD_TYPE_LABELS,
+  cloneField,
+  newField,
+  type Field,
+  type FieldType,
+} from "@/lib/fields";
 import { publishForm, saveForm, unpublishForm } from "@/lib/forms/actions";
 import { enter, panel, riseIn } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -50,6 +56,18 @@ export function Builder({
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [problems, setProblems] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
+  /*
+   * The question the last add put on screen, so its label takes the cursor.
+   * Held as an id rather than a ref because the question that receives it does
+   * not exist yet at the moment the request is made.
+   */
+  const [focusFieldId, setFocusFieldId] = useState<string | null>(null);
+  /*
+   * What the last structural edit did, spoken by the live region below. Reorder
+   * is the one builder action with no visible result of its own — the card moves
+   * and nothing else changes — so for a screen reader it is otherwise silent.
+   */
+  const [announcement, setAnnouncement] = useState("");
 
   const isFirstRender = useRef(true);
   /*
@@ -99,33 +117,55 @@ export function Builder({
 
   const published = status === "published";
 
+  /** The builder's own handler, stable so the renderer's effect can depend on it. */
+  const handleAutoFocusHandled = useCallback(() => setFocusFieldId(null), []);
+
   function updateField(id: string, next: Field) {
     setFields((prev) => prev.map((field) => (field.id === id ? next : field)));
   }
 
+  function addField(type: FieldType) {
+    const field = newField(type);
+    setFields((prev) => [...prev, field]);
+    setFocusFieldId(field.id);
+    setAnnouncement(
+      `Added a ${FIELD_TYPE_LABELS[type]} question at position ${fields.length + 1}.`,
+    );
+  }
+
   function removeField(id: string) {
+    const index = fields.findIndex((field) => field.id === id);
     setFields((prev) => prev.filter((field) => field.id !== id));
+    setAnnouncement(
+      `Question ${index + 1} removed. ${fields.length - 1} left.`,
+    );
   }
 
   function duplicateField(id: string) {
+    const index = fields.findIndex((field) => field.id === id);
+    if (index < 0) return;
+    const copy = cloneField(fields[index]);
     setFields((prev) => {
-      const index = prev.findIndex((field) => field.id === id);
-      if (index < 0) return prev;
       const next = [...prev];
-      next.splice(index + 1, 0, cloneField(prev[index]));
+      next.splice(index + 1, 0, copy);
       return next;
     });
+    setAnnouncement(
+      `Question ${index + 1} duplicated at position ${index + 2}.`,
+    );
   }
 
   function moveField(id: string, delta: number) {
+    const index = fields.findIndex((field) => field.id === id);
+    const target = index + delta;
+    if (index < 0 || target < 0 || target >= fields.length) return;
+
     setFields((prev) => {
-      const index = prev.findIndex((field) => field.id === id);
-      const target = index + delta;
-      if (index < 0 || target < 0 || target >= prev.length) return prev;
       const next = [...prev];
       [next[index], next[target]] = [next[target], next[index]];
       return next;
     });
+    setAnnouncement(`Moved to position ${target + 1} of ${fields.length}.`);
   }
 
   function handlePublish() {
@@ -149,7 +189,13 @@ export function Builder({
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between gap-4">
+      {/* Structural edits, spoken. Visually the card already moved; this is for
+          anyone who cannot see that it did. */}
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
+
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-h-7 items-center">
           <SaveIndicator state={saveState} />
         </div>
@@ -261,6 +307,8 @@ export function Builder({
                     field={field}
                     index={index}
                     total={fields.length}
+                    autoFocusLabel={focusFieldId === field.id}
+                    onAutoFocusHandled={handleAutoFocusHandled}
                     onChange={(next) => updateField(field.id, next)}
                     onRemove={() => removeField(field.id)}
                     onDuplicate={() => duplicateField(field.id)}
@@ -277,11 +325,7 @@ export function Builder({
         </div>
 
         <aside className="lg:sticky lg:top-6 lg:self-start">
-          <FieldPalette
-            onAdd={(type: FieldType) =>
-              setFields((prev) => [...prev, newField(type)])
-            }
-          />
+          <FieldPalette onAdd={addField} />
         </aside>
       </div>
     </div>

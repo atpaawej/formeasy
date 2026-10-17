@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -11,6 +11,7 @@ import {
   type Field,
   type FormSettings,
 } from "@/lib/fields";
+import { HONEYPOT_FIELD } from "@/lib/forms/honeypot";
 import { submitResponse } from "@/lib/forms/public-actions";
 import { INITIAL_SUBMIT_STATE } from "@/lib/forms/submit-state";
 import { panel } from "@/lib/motion";
@@ -39,13 +40,30 @@ export function PublicForm({
     submitResponse.bind(null, formId),
     INITIAL_SUBMIT_STATE,
   );
+  const formRef = useRef<HTMLFormElement>(null);
+
+  /*
+   * A failed submit comes back with the cursor where it was — usually on the
+   * submit button, at the bottom, with the first problem somewhere above it off
+   * screen. Moving focus to that question says where the problem is, and puts a
+   * keyboard user at the first thing to fix rather than back at the start of the
+   * form. The error text is announced by the field, not by this.
+   */
+  useEffect(() => {
+    const firstInvalid = fields.find((field) => state.errors[field.id]);
+    if (!firstInvalid) return;
+    focusField(formRef.current, firstInvalid.id);
+  }, [state, fields]);
 
   return (
     <form
+      ref={formRef}
       action={formAction}
       noValidate
-      className="rise-in flex flex-col gap-8 rounded-2xl border border-border bg-card p-6 sm:p-8"
+      className="rise-in relative flex flex-col gap-8 rounded-2xl border border-border bg-card p-6 sm:p-8"
     >
+      <Honeypot />
+
       <header className="flex flex-col gap-2.5">
         <h1 className="font-serif text-2xl leading-tight text-balance">
           {title}
@@ -85,8 +103,11 @@ export function PublicForm({
 
       <AnimatePresence initial={false}>
         {state.formError ? (
+          /* `role="alert"`: this one has no field to carry it, and it can arrive
+             after a wait — nothing else on screen would say it happened. */
           <motion.p
             key={state.formError}
+            role="alert"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -126,4 +147,46 @@ export function PublicFormFooter() {
       </Link>
     </p>
   );
+}
+
+/**
+ * The honeypot: a field a person cannot see, reach by keyboard, or hear from a
+ * screen reader, and a bot fills without thinking. It is planted in the form
+ * rather than the form being shaped around it, and it submits with the answers
+ * even when the script never runs — the server is what reads it. See
+ * lib/forms/honeypot.ts.
+ *
+ * Off screen rather than `display: none`, because the bots worth stopping are
+ * the ones that skip what is hidden but answer what the parser can see.
+ */
+function Honeypot() {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute -top-px left-[-9999px] h-px w-px overflow-hidden"
+    >
+      <label htmlFor={HONEYPOT_FIELD}>Leave this field empty</label>
+      <input
+        id={HONEYPOT_FIELD}
+        name={HONEYPOT_FIELD}
+        type="text"
+        tabIndex={-1}
+        autoComplete="off"
+      />
+    </div>
+  );
+}
+
+/**
+ * Put the cursor on the control for a field. A radio group is a list of
+ * controls, so it gets its first — the group has no focusable parent.
+ */
+function focusField(form: HTMLFormElement | null, fieldId: string) {
+  const control = form?.elements.namedItem(fieldId);
+  if (control instanceof RadioNodeList) {
+    const first = control.item(0);
+    if (first instanceof HTMLElement) first.focus();
+    return;
+  }
+  if (control instanceof HTMLElement) control.focus();
 }

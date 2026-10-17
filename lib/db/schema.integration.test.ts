@@ -150,4 +150,67 @@ describe.skipIf(!enabled)("responses storage", () => {
     },
     TEST_TIMEOUT,
   );
+
+  /*
+   * The phase 4 gate, at the database level: the rate limit counts one (IP, form)
+   * inside its window and nothing else.
+   *
+   * The `->>` extraction is the part a mock cannot prove. A mocked test says the
+   * query was built; only Postgres says it found the rows — and a count that
+   * silently matched everything, or nothing, would be a rate limit that either
+   * blocks a whole form or does not exist.
+   */
+  it(
+    "counts recent submissions for one hashed IP and one form",
+    async () => {
+      const { eq } = await import("drizzle-orm");
+      const { db } = await import("@/lib/db");
+      const { forms, responses } = await import("@/lib/db/schema");
+      const { countRecentResponses } = await import("@/lib/forms/queries");
+      const { RATE_LIMIT_WINDOW_MS } = await import("@/lib/forms/submit");
+
+      const suffix = Date.now().toString(36);
+      const formId = `test${suffix}d`;
+      const otherFormId = `test${suffix}e`;
+      const now = new Date();
+
+      await db.insert(forms).values([
+        { id: formId, ownerId: "test_owner", status: "published" },
+        { id: otherFormId, ownerId: "test_owner", status: "published" },
+      ]);
+
+      await db.insert(responses).values([
+        // This address, this form, inside the window: the one that counts.
+        { formId, answers: { t1: "one" }, meta: { ipHash: "hash-a" } },
+        // This address, this form, an hour and a minute ago: outside it.
+        {
+          formId,
+          answers: { t1: "old" },
+          meta: { ipHash: "hash-a" },
+          submittedAt: new Date(now.getTime() - RATE_LIMIT_WINDOW_MS - 60_000),
+        },
+        // Another address, inside the window.
+        { formId, answers: { t1: "other" }, meta: { ipHash: "hash-b" } },
+        // No address at all — NULL, which must not match any hash.
+        { formId, answers: { t1: "anonymous" }, meta: {} },
+        // This address, but a different form.
+        {
+          formId: otherFormId,
+          answers: { t1: "elsewhere" },
+          meta: { ipHash: "hash-a" },
+        },
+      ]);
+
+      const since = new Date(now.getTime() - RATE_LIMIT_WINDOW_MS);
+
+      expect(await countRecentResponses(formId, "hash-a", since)).toBe(1);
+      expect(await countRecentResponses(formId, "hash-b", since)).toBe(1);
+      expect(await countRecentResponses(formId, "hash-nobody", since)).toBe(0);
+      expect(await countRecentResponses(otherFormId, "hash-a", since)).toBe(1);
+
+      await db.delete(forms).where(eq(forms.id, formId));
+      await db.delete(forms).where(eq(forms.id, otherFormId));
+    },
+    TEST_TIMEOUT,
+  );
 });

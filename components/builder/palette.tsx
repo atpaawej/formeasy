@@ -45,7 +45,9 @@ export function FieldPalette({
               type="button"
               variant="outline"
               size="sm"
-              className="justify-start"
+              /* Two columns on a phone is tight for the longer names, so the
+                 label wraps and the cell grows instead of clipping. */
+              className="h-auto min-h-7 w-full justify-start py-1.5 text-left whitespace-normal"
               onClick={() => onAdd(type)}
             >
               <Icon />

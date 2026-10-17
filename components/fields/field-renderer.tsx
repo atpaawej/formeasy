@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { PlusIcon, XIcon } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -32,6 +33,14 @@ export type FieldRendererProps = {
   disabled?: boolean;
   /** edit only */
   onFieldChange?: (field: Field) => void;
+  /**
+   * edit only — put the cursor in the label. Set for a question the builder has
+   * just added, so adding one lands you in it rather than on a card to hunt
+   * through.
+   */
+  autoFocusLabel?: boolean;
+  /** edit only — called once the cursor has landed, to clear that request. */
+  onAutoFocusHandled?: () => void;
 };
 
 export function FieldRenderer(props: FieldRendererProps) {
@@ -53,6 +62,10 @@ function PreviewField({
   error,
   disabled,
 }: FieldRendererProps) {
+  // The message is part of the field: named once, referenced by the control it
+  // belongs to, so a screen reader reads the problem with the question.
+  const errorId = `${field.id}-error`;
+
   return (
     <div className="flex flex-col gap-2">
       <QuestionHeading field={field} />
@@ -63,12 +76,14 @@ function PreviewField({
         defaultValue={defaultValue}
         disabled={disabled}
         invalid={Boolean(error)}
+        describedBy={error ? errorId : undefined}
       />
       {/* Remounts on a new message, so the error lands instead of silently
           replacing the previous one. */}
       {error ? (
         <motion.p
           key={error}
+          id={errorId}
           initial={{ opacity: 0, y: -3 }}
           animate={{ opacity: 1, y: 0 }}
           transition={enter}
@@ -101,7 +116,20 @@ function QuestionHeading({ field }: { field: Field }) {
   );
 }
 
-function EditField({ field, onFieldChange }: FieldRendererProps) {
+function EditField({
+  field,
+  onFieldChange,
+  autoFocusLabel,
+  onAutoFocusHandled,
+}: FieldRendererProps) {
+  const labelRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!autoFocusLabel) return;
+    labelRef.current?.focus();
+    onAutoFocusHandled?.();
+  }, [autoFocusLabel, onAutoFocusHandled]);
+
   const update = (patch: Partial<Field>) => {
     onFieldChange?.({ ...field, ...patch } as Field);
   };
@@ -110,6 +138,7 @@ function EditField({ field, onFieldChange }: FieldRendererProps) {
     <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-0.5">
         <input
+          ref={labelRef}
           value={field.label}
           onChange={(event) => update({ label: event.target.value })}
           placeholder="Untitled question"
@@ -142,6 +171,12 @@ function ChoiceOptionsEditor({
   update: (patch: Partial<Field>) => void;
 }) {
   const square = field.type === "multi_choice";
+  /*
+   * The id of an option that was just added and has not been focused yet. The
+   * input reads it the moment it mounts — a ref callback rather than an effect,
+   * because the input does not exist until this same render commits.
+   */
+  const pendingFocus = useRef<string | null>(null);
 
   const setLabel = (optionId: string, label: string) => {
     update({
@@ -163,6 +198,12 @@ function ChoiceOptionsEditor({
             )}
           />
           <input
+            ref={(element) => {
+              if (element && pendingFocus.current === option.id) {
+                pendingFocus.current = null;
+                element.focus();
+              }
+            }}
             value={option.label}
             onChange={(event) => setLabel(option.id, event.target.value)}
             placeholder={`Option ${index + 1}`}
@@ -192,7 +233,11 @@ function ChoiceOptionsEditor({
         variant="ghost"
         size="sm"
         className="self-start"
-        onClick={() => update({ options: [...field.options, newOption()] })}
+        onClick={() => {
+          const option = newOption();
+          pendingFocus.current = option.id;
+          update({ options: [...field.options, option] });
+        }}
       >
         <PlusIcon />
         Add option

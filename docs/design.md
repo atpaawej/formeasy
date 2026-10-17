@@ -242,6 +242,7 @@ annoys people. Warn, don't block.
 client: render fields passed from the server; instant checks for UX only
    ↓
 server: load form → assert published && accept_responses
+        → honeypot → rate limit → size caps
         → parse FormData → validate with fieldsToZod(fields)
         → insert response → redirect to thank-you
 ```
@@ -254,6 +255,101 @@ filled-in form to one bad field is unforgivable. Server actions +
 
 `meta` records a hashed IP, user agent, and referrer from day one, so abuse
 handling (honeypot, rate limit) can be added without a schema change.
+
+## Abuse handling
+
+A public endpoint that writes rows needs a way to say no that is not a captcha.
+Three checks sit in front of validation, cheapest and most certain first. All
+three are *decisions* in pure modules — `lib/forms/submit.ts` and
+`lib/forms/honeypot.ts` — with the action supplying the values, the recent count,
+and the clock. That is what makes them testable without a request, a database, or
+a second of waiting.
+
+| check | catches | decision | answer |
+|---|---|---|---|
+| honeypot | a script that fills every input it finds | `honeypotTripped` | the thank-you page |
+| rate limit | one address hammering one form | `isRateLimited` | "too many responses… try later" |
+| size caps | megabytes in one field | `exceedsSubmissionSize` | "that submission is too large" |
+
+Decisions worth recording:
+
+- **The honeypot is answered with success, not with an error.** A spam script
+  that is told what tripped it is a script that gets through next time. It writes
+  nothing and redirects to the thank-you page, which is indistinguishable — from
+  outside — from a form that accepted the response. It lives in its own module
+  because the *form* plants it and the *action* reads it, and the form is a
+  client component that must not import `node:crypto` along the way.
+- **The rate limit counts the `responses` table.** `meta.ipHash` plus the
+  `(form_id, submitted_at)` index answers "how many times has this address
+  answered this form in the last hour" in one indexed count. No new table, no
+  cache, no migration, and the same answer on one serverless instance or twenty.
+  It is deliberately *not* atomic — two simultaneous submissions can both see the
+  last slot — so the limit is a throttle rather than a quota, and it is set for
+  the honest crowd rather than the attacker: one address is often one building,
+  and a meeting answering the same form at once must not be refused. Fifty an
+  hour per form is room for that, and still 1,200 rows a day per address. A
+  per-instance in-memory counter was the alternative; it is invisible to the next
+  instance and forgets on every deploy, which is worse than useless as a throttle.
+- **No address, no limit.** Without `x-forwarded-for` there is nothing to count
+  *per IP*, and falling back to counting everyone together would let one
+  respondent close the form for everybody. The check is skipped instead.
+- **The size caps sit above the validation limit.** A text answer tops out at
+  5000 characters (`MAX_TEXT_LENGTH`), which is at most 20 KB of UTF-8, so the
+  per-answer cap is 32 KB: a long but honest answer is always refused by its own
+  field's message and never by the size cap, and the two limits can't disagree.
+  What's left for the caps is the shape validation never sees — a single
+  megabyte, or a payload that is reasonable per field and absurd in total.
+- **The size check runs on the raw values, before parsing.** The point is not to
+  store it, not to validate it — not to touch it. A rejected megabyte is also not
+  echoed back into the re-rendered form.
+
+## Failure surfaces
+
+Every failure that is ours, rather than the respondent's, has a designed end:
+
+| where | what the person sees | what the log gets |
+|---|---|---|
+| a shell page (`error.tsx`) | a dashed panel, "Try again", the app chrome intact | `reportError` with `where: "app"` |
+| the dashboard | the same, plus a way back to your forms | `where: "dashboard"` |
+| the public form | "This form could not be loaded", retry only | `where: "public-form"` |
+| the root layout | a bare page — the provider may be the casualty | `where: "global"` |
+| a draft or missing form | a 404 written for the respondent | — |
+| a save that never lands | the builder's "Couldn't save" | `where: "saveForm"` |
+| a failed submit | "Something went wrong saving your response", answers preserved | `where: "submitResponse"` |
+| a failed CSV export | plain text in the browser, since the response *is* the page | `where: "exportCsv"` |
+
+Two rules hold across all of them:
+
+- **The copy never carries the cause.** No error code, no driver message, no
+  stack. A respondent can only act on "try again"; the cause belongs in the log,
+  where someone can act on it. Server Components make this mandatory anyway —
+  Next strips their error messages in production.
+- **The chrome survives.** A dashboard page that fails keeps the dashboard's
+  header and user button, because only the segment below the layout is replaced.
+  An error that takes the whole shell with it is what makes a bug feel like a
+  broken product.
+
+`reportError` (`lib/observability.ts`) is the single sink: one JSON line on
+stderr, plus a best-effort POST to `ERROR_REPORT_URL` when one is set. The log
+line is the durable record; the forward is fire-and-forget on purpose, because a
+reporter that can fail the request it is reporting on is worse than none. Call
+sites pass ids, never answers — a report is not a second copy of someone's data.
+
+### Loading
+
+Every segment that reads the session or the database already streams behind its
+own `<Suspense>` with a skeleton shaped like the content it replaces — the
+dashboard list, the builder, the responses list, the form nav. There is
+deliberately no `loading.tsx` anywhere: a route-level file would wrap a page that
+already has a fallback for exactly the same wait, and the two would eventually
+disagree about the shape of it.
+
+The two public pages are the deliberate exception, and they block instead. A
+draft must 404 for a shared link rather than return 200 with a not-found page
+inside it, which means the status code cannot be settled after streaming starts —
+and a respondent arriving cold has no shell worth streaming ahead of the form
+itself. See `app/f/[id]/page.tsx`.
+
 
 ## Responses
 

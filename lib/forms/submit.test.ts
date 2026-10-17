@@ -2,8 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import type { Field } from "@/lib/fields";
 import {
+  MAX_ANSWER_BYTES,
+  MAX_PAYLOAD_BYTES,
+  RATE_LIMIT_MAX,
+  RATE_LIMIT_WINDOW_MS,
   canAcceptResponses,
+  exceedsSubmissionSize,
   hashIp,
+  isRateLimited,
+  rateLimitWindowStart,
   readAnswersFromFormData,
 } from "./submit";
 
@@ -85,6 +92,71 @@ describe("readAnswersFromFormData", () => {
     expect(
       readAnswersFromFormData(fields, formData({ t1: "Ada", ghost: "x" })),
     ).toEqual({ t1: "Ada" });
+  });
+});
+
+describe("exceedsSubmissionSize", () => {
+  it("passes a normal answer", () => {
+    expect(exceedsSubmissionSize({ t1: "Ada" })).toBe(false);
+  });
+
+  it("passes an answer at the per-answer cap", () => {
+    expect(
+      exceedsSubmissionSize({ t1: "x".repeat(MAX_ANSWER_BYTES) }),
+    ).toBe(false);
+  });
+
+  it("refuses a single answer past the cap", () => {
+    expect(
+      exceedsSubmissionSize({ t1: "x".repeat(MAX_ANSWER_BYTES + 1) }),
+    ).toBe(true);
+  });
+
+  it("counts each value of a multi-choice answer", () => {
+    expect(
+      exceedsSubmissionSize({ m1: ["a", "b", "c"] }),
+    ).toBe(false);
+  });
+
+  it("refuses a set of individually legal answers that adds up too large", () => {
+    // Each answer is under the per-answer cap; together they are not.
+    const chunk = "x".repeat(MAX_ANSWER_BYTES);
+    const values: Record<string, string> = {};
+    for (let i = 0; i <= MAX_PAYLOAD_BYTES / MAX_ANSWER_BYTES; i += 1) {
+      values[`f${i}`] = chunk;
+    }
+
+    expect(exceedsSubmissionSize(values)).toBe(true);
+  });
+
+  it("leaves a longest-legal answer to the field's own message", () => {
+    // 5000 CJK characters is 15 KB — the largest a text answer can be at
+    // MAX_TEXT_LENGTH. It must pass the cap and be judged by its field's "keep
+    // it under 5000 characters" rule instead, or the two limits disagree.
+    expect(exceedsSubmissionSize({ t1: "字".repeat(5000) })).toBe(false);
+  });
+
+  it("passes nothing at all", () => {
+    expect(exceedsSubmissionSize({})).toBe(false);
+  });
+});
+
+describe("rate limiting", () => {
+  it("allows the allowance", () => {
+    expect(isRateLimited(RATE_LIMIT_MAX - 1)).toBe(false);
+  });
+
+  it("refuses once the allowance is spent", () => {
+    expect(isRateLimited(RATE_LIMIT_MAX)).toBe(true);
+    expect(isRateLimited(RATE_LIMIT_MAX + 5)).toBe(true);
+  });
+
+  it("starts the window one window-length before now", () => {
+    const now = new Date("2026-01-01T12:00:00.000Z");
+
+    expect(rateLimitWindowStart(now).getTime()).toBe(
+      now.getTime() - RATE_LIMIT_WINDOW_MS,
+    );
   });
 });
 

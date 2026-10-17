@@ -22,7 +22,16 @@ export async function generateMetadata(
   props: PageProps<"/f/[id]">,
 ): Promise<Metadata> {
   const { id } = await props.params;
-  const form = await getFormById(id);
+
+  /*
+   * Metadata is decoration, and it runs outside this segment's error boundary:
+   * a throw here takes the whole page down before the page's own failure story
+   * (a friendly boundary) ever gets a turn. So a form whose title cannot be read
+   * loses its title and nothing else. Nothing is hidden by catching here — the
+   * page below reads the same row in the same request, and if the database is
+   * the problem it fails loudly, with an error boundary and a report.
+   */
+  const form = await getFormById(id).catch(() => null);
   if (!form || form.status !== "published") return {};
 
   return {
