@@ -168,6 +168,7 @@ for what to know when you run more than one instance.
 | ORM | Drizzle |
 | Auth | Clerk |
 | UI | Tailwind 4 + shadcn/ui, with motion as a token language |
+| Analytics | Vercel Web Analytics (`@vercel/analytics`), rendered only when `VERCEL` is set — see [`docs/design.md`](docs/design.md#analytics) |
 
 ## Docs
 

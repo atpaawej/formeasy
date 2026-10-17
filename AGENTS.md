@@ -101,6 +101,12 @@ Visual direction — palette, type, layout, and the rules behind them — is in
   in the values, the recent count, and the clock. The rate limit counts the
   `responses` table off `(form_id, submitted_at)` + `meta.ipHash` — no extra
   table, no cache, no migration. See [`docs/design.md`](docs/design.md).
+- **Analytics is Vercel-only, and the layout gates on that.** `<Analytics />`
+  injects a script fetched from `/_vercel/insights/script.js`, which only Vercel's
+  own edge serves. `app/layout.tsx` renders it only when `process.env.VERCEL` is
+  set, so a self-hosted image does not put a 404 in every visitor's network log.
+  The `<Suspense>` around it is required, not decorative: the component reads
+  `useSearchParams`, and Cache Components wants a boundary around that read.
 - **Every failure of ours goes through `reportError`** (`lib/observability.ts`),
   and every route has an `error.tsx` that is three lines because
   `components/route-error.tsx` owns the reporting and the fallback shape. The copy
